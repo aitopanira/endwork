@@ -9,6 +9,8 @@ import NovelDetailView from '@/views/NovelDetailView.vue'
 import CommunityView from '@/views/CommunityView.vue'  
 import GalgameView from '@/views/GalgameView.vue'
 import NovelView from '@/views/NovelView.vue'
+import BrandDetailView from '@/views/BrandDetailView.vue'
+import AllBrandsView from '@/views/AllBrandsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL), 
@@ -41,7 +43,7 @@ const router = createRouter({
       { 
       path: '/galgame/:id', 
       name: 'galgame-detail', 
-      component: GalgameView
+      component: GalgameDetailView
     },
     { 
       path: '/novel', 
@@ -58,6 +60,16 @@ const router = createRouter({
       name: 'community', 
       component: CommunityView
     },
+    {
+      path: '/brand/:name', 
+      name: 'brand-detail', 
+      component: BrandDetailView
+    },
+    { 
+      path: '/brands', 
+      name: 'all-brands', 
+      component: AllBrandsView 
+    }
   ],
 })
 

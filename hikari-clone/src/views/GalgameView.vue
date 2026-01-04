@@ -76,6 +76,9 @@ const reviews = ref([
 const goToDetail = (id) => {
   router.push(`/galgame/${id}`)
 }
+const goToBrand = (name) => {
+  router.push(`/brand/${name}`)
+}
 </script>
 
 <template>
@@ -153,16 +156,27 @@ const goToDetail = (id) => {
           </div>
         </section>
 
-        <section class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-           <h2 class="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider">Brand Partners</h2>
-           <div class="flex flex-wrap justify-between gap-4">
-             <div v-for="brand in brands" :key="brand.name" class="flex flex-col items-center gap-2 cursor-pointer group">
-               <div :class="`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xs shadow-sm group-hover:scale-110 transition ${brand.color}`">
-                 {{ brand.name }}
-               </div>
-             </div>
-           </div>
-        </section>
+  <section class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+     <div class="flex justify-between items-center mb-6">
+       <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Brand Partners</h2>
+       <n-button text size="tiny" class="text-gray-400 hover:text-hikari-blue" @click="router.push('/brands')">
+         更多厂商 >
+       </n-button>
+     </div>
+     
+     <div class="flex flex-wrap justify-between gap-4">
+       <div 
+         v-for="brand in brands" 
+         :key="brand.name" 
+         @click="goToBrand(brand.name)"
+         class="flex flex-col items-center gap-2 cursor-pointer group"
+       >
+         <div :class="`w-14 h-14 rounded-full flex items-center justify-center font-bold text-xs shadow-sm group-hover:scale-110 transition ${brand.color}`">
+           {{ brand.name }}
+         </div>
+       </div>
+     </div>
+  </section>
         
         <section>
           <div class="flex items-center gap-2 mb-4">
@@ -191,46 +205,48 @@ const goToDetail = (id) => {
 
       </main>
 
-      <aside class="lg:col-span-1 space-y-8">
+    <aside class="lg:col-span-1">
         
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 sticky top-24">
-          <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <n-icon :component="TrophyOutline" class="text-yellow-500"/> 游戏评分榜
-          </h3>
-          <ul class="space-y-4">
-            <li v-for="(item, index) in rankingList" :key="item.id" class="flex items-center justify-between group cursor-pointer">
-              <div class="flex items-center gap-3">
-                <span :class="`font-bold w-5 text-center ${index < 3 ? 'text-hikari-pink' : 'text-gray-400'}`">
-                  {{ index + 1 }}
-                </span>
-                <span class="text-sm font-medium text-gray-700 group-hover:text-hikari-blue transition truncate max-w-[120px]">
-                  {{ item.title }}
-                </span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-yellow-500">{{ item.score }}</span>
-              </div>
-            </li>
-          </ul>
-          <div class="mt-4 pt-4 border-t border-gray-50 text-center">
-            <n-button text size="tiny" class="text-gray-400 hover:text-hikari-blue">查看完整榜单</n-button>
+        <div class="sticky top-24 space-y-8">
+          
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <n-icon :component="TrophyOutline" class="text-yellow-500"/> 游戏评分榜
+            </h3>
+            <ul class="space-y-4">
+              <li v-for="(item, index) in rankingList" :key="item.id" class="flex items-center justify-between group cursor-pointer">
+                <div class="flex items-center gap-3">
+                  <span :class="`font-bold w-5 text-center ${index < 3 ? 'text-hikari-pink' : 'text-gray-400'}`">
+                    {{ index + 1 }}
+                  </span>
+                  <span class="text-sm font-medium text-gray-700 group-hover:text-hikari-blue transition truncate max-w-[120px]">
+                    {{ item.title }}
+                  </span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-yellow-500">{{ item.score }}</span>
+                </div>
+              </li>
+            </ul>
+            <div class="mt-4 pt-4 border-t border-gray-50 text-center">
+              <n-button text size="tiny" class="text-gray-400 hover:text-hikari-blue">查看完整榜单</n-button>
+            </div>
           </div>
-        </div>
 
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-           <h3 class="font-bold text-gray-800 mb-4 text-sm">热门标签</h3>
-           <div class="flex flex-wrap gap-2">
-             <n-tag size="small" checkable>剧情作</n-tag>
-             <n-tag size="small" checkable>纯爱</n-tag>
-             <n-tag size="small" checkable>废萌</n-tag>
-             <n-tag size="small" checkable>拔作</n-tag>
-             <n-tag size="small" checkable>NTR</n-tag>
-             <n-tag size="small" checkable>Key社</n-tag>
-             <n-tag size="small" checkable>柚子社</n-tag>
-           </div>
-        </div>
-
-      </aside>
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+             <h3 class="font-bold text-gray-800 mb-4 text-sm">热门标签</h3>
+             <div class="flex flex-wrap gap-2">
+               <n-tag size="small" checkable>剧情作</n-tag>
+               <n-tag size="small" checkable>纯爱</n-tag>
+               <n-tag size="small" checkable>废萌</n-tag>
+               <n-tag size="small" checkable>拔作</n-tag>
+               <n-tag size="small" checkable>NTR</n-tag>
+               <n-tag size="small" checkable>Key社</n-tag>
+               <n-tag size="small" checkable>柚子社</n-tag>
+             </div>
+          </div>
+          
+        </div> </aside>
 
     </div>
   </div>

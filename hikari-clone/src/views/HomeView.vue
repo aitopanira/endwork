@@ -460,6 +460,7 @@ const posts = ref([
     </div>
 
     <aside class="lg:col-span-1 space-y-6">
+        <div class="sticky top-24 space-y-8">
       <div v-if="userStore.userInfo" class="bg-white p-5 rounded-lg shadow-sm animate-fade-in">
         <div class="flex items-center gap-4 mb-4">
           <n-avatar round :size="50" :src="userStore.userInfo.avatar" class="border border-gray-200" />
@@ -546,7 +547,7 @@ const posts = ref([
           <span class="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded cursor-pointer hover:bg-gray-200">#求助</span>
         </div>
       </div>
-
+</div>
     </aside>
 
   </div>
