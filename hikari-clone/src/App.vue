@@ -1,15 +1,22 @@
 <script setup>
-import { RouterView } from 'vue-router'
+import { computed } from 'vue'
+import { RouterView, useRoute } from 'vue-router'
 import NavBar from './components/NavBar.vue' // 引入导航栏
 import { NMessageProvider } from 'naive-ui' // 引入消息提示组件
+
+const route = useRoute()
+
+// 判断当前是否为阅读页面
+// 注意：这需要你在 router/index.js 中把阅读页的 name 设为 'reader'
+const isReaderPage = computed(() => route.name === 'reader')
 </script>
 
 <template>
   <n-message-provider>
     
-    <NavBar />
+    <NavBar v-if="!isReaderPage" />
 
-    <main class="container mx-auto px-4 py-6">
+    <main :class="isReaderPage ? 'w-screen h-screen overflow-hidden' : 'container mx-auto px-4 py-6'">
       <RouterView />
     </main>
     
@@ -17,8 +24,9 @@ import { NMessageProvider } from 'naive-ui' // 引入消息提示组件
 </template>
 
 <style>
-/* 全局背景色，避免只有中间白，两边没颜色 */
+/* 全局背景色 */
 body {
-  background-color: #f9fafb; 
+  background-color: #f9fafb;
+  margin: 0; /* 确保没有默认边距 */
 }
 </style>

@@ -43,6 +43,24 @@ onMounted(() => {
     }
   }
 })
+
+// 跳转到阅读页
+const handleStartReading = () => {
+  router.push({
+    name: 'reader', // 确保你的 router 中定义了 name: 'reader'
+    params: { id: novel.value.id },
+    query: { title: novel.value.title }
+  })
+}
+
+// 跳转到特定卷
+const handleReadVolume = (volumeId) => {
+  router.push({
+    name: 'reader',
+    params: { id: novel.value.id },
+    query: { title: novel.value.title, volume: volumeId }
+  })
+}
 </script>
 
 <template>
@@ -95,7 +113,13 @@ onMounted(() => {
                <template #icon><n-icon :component="CreateOutline" /></template>
                写评价
             </n-button>
-            <n-button type="primary" color="#3b82f6" size="large" class="w-40 shadow-lg font-bold ml-auto md:ml-0">
+            <n-button 
+              @click="handleStartReading"
+              type="primary" 
+              color="#3b82f6" 
+              size="large" 
+              class="w-40 shadow-lg font-bold ml-auto md:ml-0"
+            >
                <template #icon><n-icon :component="BookOutline" /></template>
                开始阅读
             </n-button>
@@ -145,7 +169,12 @@ onMounted(() => {
                <span class="text-xs text-gray-400 cursor-pointer hover:text-blue-500">全部 ></span>
              </div>
              <div class="space-y-3">
-               <div v-for="vol in novel.volumes" :key="vol.id" class="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-lg cursor-pointer group transition">
+               <div 
+                 v-for="vol in novel.volumes" 
+                 :key="vol.id" 
+                 @click="handleReadVolume(vol.id)"
+                 class="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-lg cursor-pointer group transition"
+               >
                  <div class="w-12 h-16 rounded overflow-hidden flex-shrink-0 border border-gray-200">
                    <img :src="vol.cover" class="w-full h-full object-cover">
                  </div>

@@ -11,6 +11,7 @@ import GalgameView from '@/views/GalgameView.vue'
 import NovelView from '@/views/NovelView.vue'
 import BrandDetailView from '@/views/BrandDetailView.vue'
 import AllBrandsView from '@/views/AllBrandsView.vue'
+import ReaderView from '@/views/ReaderView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL), 
@@ -69,7 +70,12 @@ const router = createRouter({
       path: '/brands', 
       name: 'all-brands', 
       component: AllBrandsView 
-    }
+    },
+    {
+      path: '/read/:id', // :id 是小说ID
+      name: 'reader',
+      component: ReaderView
+    },
   ],
 })
 
