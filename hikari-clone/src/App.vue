@@ -1,31 +1,24 @@
 <script setup>
 import { RouterView } from 'vue-router'
-import NavBar from './components/NavBar.vue'
-import AppFooter from './components/Footer.vue'
-import { NConfigProvider } from 'naive-ui'
-
-// 配置 Naive UI 的主题色，让它和 Tailwind 的粉色一致
-const themeOverrides = {
-  common: {
-    primaryColor: '#fb7299',
-    primaryColorHover: '#fc8bab',
-    primaryColorPressed: '#d05c7c',
-  }
-}
+import NavBar from './components/NavBar.vue' // 引入导航栏
+import { NMessageProvider } from 'naive-ui' // 引入消息提示组件
 </script>
 
 <template>
-  <n-config-provider :theme-overrides="themeOverrides">
-    <div class="min-h-screen flex flex-col font-sans text-gray-700">
-      
-      <NavBar />
-      
-      <main class="container mx-auto px-4 flex-grow py-6">
-        <RouterView />
-      </main>
+  <n-message-provider>
+    
+    <NavBar />
 
-      <AppFooter />
-      
-    </div>
-  </n-config-provider>
+    <main class="container mx-auto px-4 py-6">
+      <RouterView />
+    </main>
+    
+  </n-message-provider>
 </template>
+
+<style>
+/* 全局背景色，避免只有中间白，两边没颜色 */
+body {
+  background-color: #f9fafb; 
+}
+</style>

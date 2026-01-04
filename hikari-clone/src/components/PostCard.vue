@@ -1,10 +1,9 @@
 <script setup>
-import { useRouter } from 'vue-router' // 1. 引入路由钩子
+import { useRouter } from 'vue-router'
 
-const router = useRouter() // 2. 获取路由实例
+const router = useRouter()
 
-// 定义 Props
-defineProps({
+const props = defineProps({
   post: {
     type: Object,
     required: true
@@ -12,14 +11,15 @@ defineProps({
 })
 
 // 跳转函数
-const goToDetail = (id) => {
-  router.push(`/post/${id}`)
+const goToDetail = () => {
+  // 跳转到 /post/ID
+  router.push(`/post/${props.post.id}`)
 }
 </script>
 
 <template>
   <div 
-    @click="goToDetail(post.id)"
+    @click="goToDetail"
     class="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col sm:flex-row gap-4 cursor-pointer group border border-gray-100"
   >
     <div class="w-full sm:w-48 h-32 flex-shrink-0 overflow-hidden rounded bg-gray-200 relative">

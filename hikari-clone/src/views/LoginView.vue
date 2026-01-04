@@ -2,24 +2,50 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { NTabs, NTabPane, NInput, NButton, NCheckbox, NIcon } from 'naive-ui'
-// 引入图标：这次只用了 Person (人), Lock (锁), Mail (信封)
 import { PersonOutline, LockClosedOutline, MailOutline } from '@vicons/ionicons5'
+import { useUserStore } from '../stores/user'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore() // 获取仓库
+
 const activeTab = ref('login')
 
+// === 1. 登录表单数据 ===
 const loginForm = ref({ username: '', password: '' })
 
+// === 2. 注册表单数据 (新增) ===
+const registerForm = ref({ nickname: '', email: '', password: '' })
+
+// 处理登录
 const handleLogin = () => {
   if (!loginForm.value.username || !loginForm.value.password) {
-    window.$message?.warning('请输入账号和密码') // 如果没配 MessageProvider，这行可能不弹窗，但不影响运行
+    window.$message?.warning('请输入账号和密码')
     return
   }
+  userStore.login(loginForm.value.username)
   
-  // 模拟登录成功，跳转
+  // 跳转
   const jumpUrl = route.query.jumpTo || '/'
   router.push(jumpUrl)
+}
+
+// === 处理注册 (新增) ===
+const handleRegister = () => {
+  // 简单校验
+  if (!registerForm.value.nickname || !registerForm.value.email || !registerForm.value.password) {
+    window.$message?.warning('请填写完整的注册信息') // 如果没配 MessageProvider，这行可能不弹窗
+    return
+  }
+
+  // 调用 Store 的注册方法
+  userStore.register(registerForm.value.nickname, registerForm.value.email)
+
+  // 模拟注册成功提示
+  alert(`注册成功！欢迎你，${registerForm.value.nickname}`)
+
+  // 注册成功后，直接跳转首页
+  router.push('/')
 }
 </script>
 
@@ -42,17 +68,12 @@ const handleLogin = () => {
       <n-tabs v-model:value="activeTab" size="large" justify-content="space-evenly" animated type="segment">
         
         <n-tab-pane name="login" tab="登 录">
-          <div class="mt-6 space-y-6">
+          <form class="mt-6 space-y-6" @submit.prevent="handleLogin">
             <n-input v-model:value="loginForm.username" placeholder="账号 / 邮箱" size="large" round>
-              <template #prefix>
-                <n-icon :component="PersonOutline" class="text-gray-500" />
-              </template>
+              <template #prefix><n-icon :component="PersonOutline" class="text-gray-500" /></template>
             </n-input>
-            
             <n-input v-model:value="loginForm.password" type="password" show-password-on="click" placeholder="密码" size="large" round>
-              <template #prefix>
-                <n-icon :component="LockClosedOutline" class="text-gray-500" />
-              </template>
+              <template #prefix><n-icon :component="LockClosedOutline" class="text-gray-500" /></template>
             </n-input>
 
             <div class="flex justify-between items-center text-sm px-1">
@@ -60,29 +81,32 @@ const handleLogin = () => {
               <a href="#" class="text-gray-500 hover:text-hikari-pink transition">忘记密码?</a>
             </div>
 
-            <n-button type="primary" block round size="large" color="#fb7299" @click="handleLogin" class="shadow-lg">
+            <n-button attr-type="submit" type="primary" block round size="large" color="#fb7299" class="shadow-lg">
               <span class="font-bold tracking-widest">进入社区</span>
             </n-button>
-          </div>
+          </form>
         </n-tab-pane>
 
         <n-tab-pane name="register" tab="注 册">
-          <div class="mt-6 space-y-4">
-            <n-input placeholder="昵称" size="large" round>
+          <form class="mt-6 space-y-4" @submit.prevent="handleRegister">
+            <n-input v-model:value="registerForm.nickname" placeholder="昵称" size="large" round>
               <template #prefix><n-icon :component="PersonOutline" /></template>
             </n-input>
-            <n-input placeholder="邮箱" size="large" round>
+            
+            <n-input v-model:value="registerForm.email" placeholder="邮箱" size="large" round>
               <template #prefix><n-icon :component="MailOutline" /></template>
             </n-input>
-            <n-input type="password" placeholder="设置密码" size="large" round>
+            
+            <n-input v-model:value="registerForm.password" type="password" placeholder="设置密码" size="large" round>
               <template #prefix><n-icon :component="LockClosedOutline" /></template>
             </n-input>
             
-            <n-button type="info" block round dashed size="large" class="mt-4">
+            <n-button attr-type="submit" type="info" block round dashed size="large" class="mt-4">
               立即注册
             </n-button>
-          </div>
+          </form>
         </n-tab-pane>
+
       </n-tabs>
 
       <div class="mt-8">
@@ -109,7 +133,6 @@ const handleLogin = () => {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
-/* 修改 Tab 轨道颜色 */
 :deep(.n-tabs-rail) {
   background-color: rgba(243, 244, 246, 0.7); 
 }
