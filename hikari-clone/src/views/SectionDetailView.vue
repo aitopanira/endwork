@@ -105,10 +105,10 @@ const goToPost = (id) => {
                <div class="flex flex-col"><span class="font-bold text-gray-800">0</span> 发布</div>
              </div>
              <div class="space-y-3">
-               <n-button type="primary" color="#18a058" block round class="shadow-sm font-bold">
+               <n-button type="primary" color="#fb7299" block round class="shadow-sm font-bold">
                  + 发布内容
                </n-button>
-               <n-button secondary type="success" block round class="font-bold">
+               <n-button secondary color="#fb7299" block round class="font-bold">
                  内容管理
                </n-button>
              </div>

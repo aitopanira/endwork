@@ -148,11 +148,11 @@ const goBack = () => {
               </div>
               
               <div class="space-y-3">
-                <n-button type="primary" color="#18a058" block round class="shadow-sm font-bold" @click="router.push('/creator')">
+                <n-button type="primary" color="#fb7299" block round class="shadow-sm font-bold" @click="router.push('/creator')">
                   <template #icon><n-icon :component="CreateOutline" /></template>
                   发布内容
                 </n-button>
-                <n-button secondary type="success" block round class="font-bold">
+                <n-button secondary color="#fb7299" block round class="font-bold">
                   <template #icon><n-icon :component="SettingsOutline" /></template>
                   内容管理
                 </n-button>
