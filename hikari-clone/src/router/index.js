@@ -12,6 +12,9 @@ import NovelView from '@/views/NovelView.vue'
 import BrandDetailView from '@/views/BrandDetailView.vue'
 import AllBrandsView from '@/views/AllBrandsView.vue'
 import ReaderView from '@/views/ReaderView.vue'
+import CreatorCenterView from '@/views/CreatorCenterView.vue'
+import TopicDetailView from '@/views/TopicDetailView.vue'
+import SectionDetailView from '@/views/SectionDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL), 
@@ -76,7 +79,23 @@ const router = createRouter({
       name: 'reader',
       component: ReaderView
     },
+    {
+      path: '/creator',
+      name: 'creator',
+      component: CreatorCenterView
+    },
+    {
+      path: '/community/topic/:id',
+      name: 'topic-detail',
+      component: TopicDetailView
+    },
+    {
+      path: '/community/section/:id',
+      name: 'section-detail',
+      component: SectionDetailView
+    }
   ],
+
 })
 
 export default router

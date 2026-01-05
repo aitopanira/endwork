@@ -3,7 +3,7 @@
 import { h } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { NInput, NAvatar, NIcon, NDropdown } from 'naive-ui'
-import { SearchOutline, LogOutOutline, PersonOutline } from '@vicons/ionicons5'
+import { SearchOutline, LogOutOutline, PersonOutline, CreateOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
@@ -22,6 +22,11 @@ const userOptions = [
     key: 'profile', 
     icon: renderIcon(PersonOutline) 
   },
+  {
+    label: '创作者中心', 
+    key: 'creator-center', 
+    icon: renderIcon(CreateOutline) 
+  },
   { 
     label: '退出登录', 
     key: 'logout', 
@@ -39,6 +44,11 @@ const handleSelect = (key) => {
     // === 修改这里 ===
     // 之前是 alert，现在改成跳转
     router.push('/profile')
+  }
+  else if (key === 'creator-center') {
+    // === 新增这里 ===
+    // 跳转到创作中心页面
+    router.push('/creator')
   }
 }
 </script>

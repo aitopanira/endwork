@@ -82,6 +82,23 @@ export const useResourceStore = defineStore('resource', () => {
     }
   ])
 
+
+  const addGalgame = (data) => {
+    galgames.value.unshift({
+      id: Date.now(), // 模拟ID
+      score: 0, // 初始评分
+      ...data
+    })
+  }
+
+  const addNovel = (data) => {
+    novels.value.unshift({
+      id: Date.now(),
+      score: 0,
+      status: '连载中',
+      ...data
+    })
+  }
   // === 核心功能：根据 ID 查找数据 ===
   const getGalgameById = (id) => {
     return galgames.value.find(g => g.id == id)
@@ -91,5 +108,5 @@ export const useResourceStore = defineStore('resource', () => {
     return novels.value.find(n => n.id == id)
   }
 
-  return { galgames, novels, getGalgameById, getNovelById }
+  return { galgames, novels, getGalgameById, getNovelById, addGalgame, addNovel }
 })
