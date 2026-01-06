@@ -3,7 +3,7 @@
 import { h } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { NInput, NAvatar, NIcon, NDropdown } from 'naive-ui'
-import { SearchOutline, LogOutOutline, PersonOutline, CreateOutline } from '@vicons/ionicons5'
+import { SearchOutline, LogOutOutline, PersonOutline, CreateOutline,LibraryOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
@@ -28,6 +28,11 @@ const userOptions = [
     icon: renderIcon(CreateOutline) 
   },
   { 
+    label: '我的收藏',
+    key: 'library', 
+    icon: renderIcon(LibraryOutline) 
+  },
+  { 
     label: '退出登录', 
     key: 'logout', 
     icon: renderIcon(LogOutOutline) 
@@ -49,6 +54,9 @@ const handleSelect = (key) => {
     // === 新增这里 ===
     // 跳转到创作中心页面
     router.push('/creator')
+  }
+  else if (key === 'library') { // 新增跳转逻辑
+    router.push('/library')
   }
 }
 </script>

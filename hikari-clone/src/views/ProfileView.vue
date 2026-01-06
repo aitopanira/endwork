@@ -1,16 +1,17 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
-import { NTabs, NTabPane, NInput, NButton, NAvatar, NTag, NIcon, NCard, NDivider, NProgress } from 'naive-ui'
+import { NTabs, NTabPane, NInput, NButton, NAvatar, NTag, NIcon, NSelect, NModal, NCard, NForm, NFormItem } from 'naive-ui'
 import { 
   CreateOutline, 
   HeartOutline, 
   SettingsOutline, 
-  LocationOutline, 
   CalendarOutline, 
   IdCardOutline,
-  MaleFemaleOutline
+  MaleFemaleOutline,
+  CameraOutline,
+  PencilOutline // 新增笔图标
 } from '@vicons/ionicons5'
 import PostCard from '../components/PostCard.vue'
 
@@ -23,17 +24,55 @@ onMounted(() => {
   }
 })
 
-const editForm = ref({
-  name: userStore.userInfo?.name || '',
-  bio: userStore.userInfo?.bio || ''
+// 控制弹窗显示
+const showAvatarModal = ref(false)
+const showEditModal = ref(false) // 新增：控制编辑资料弹窗
+
+const expPercentage = computed(() => {
+  if (!userStore.userInfo) return '0%'
+  const pct = (userStore.userInfo.currentExp / userStore.userInfo.nextLevelExp) * 100
+  return Math.min(pct, 100).toFixed(1) + '%'
 })
 
-const handleSave = () => {
-  userStore.updateProfile({ name: editForm.value.name, bio: editForm.value.bio })
-  window.$message?.success('保存个人资料成功！')
+const editForm = ref({
+  name: userStore.userInfo?.name || '',
+  bio: userStore.userInfo?.bio || '',
+  gender: userStore.userInfo?.gender || '保密', 
+  avatar: userStore.userInfo?.avatar || ''      
+})
+
+const presetAvatars = [
+  'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
+  'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg',
+  'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg',
+  'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg'
+]
+
+const genderOptions = [
+  { label: '保密', value: '保密' },
+  { label: '男', value: '男' },
+  { label: '女', value: '女' },
+  { label: '沃尔玛购物袋', value: '沃尔玛购物袋' }
+]
+
+// 选择头像
+const selectAvatar = (url) => {
+  editForm.value.avatar = url
+  showAvatarModal.value = false 
+  // 如果是从编辑资料弹窗打开的，选择后不关闭编辑弹窗，只关闭头像选择
 }
 
-// 模拟动态数据
+const handleSave = () => {
+  userStore.updateProfile({ 
+    name: editForm.value.name, 
+    bio: editForm.value.bio,
+    gender: editForm.value.gender,
+    avatar: editForm.value.avatar
+  })
+  window.$message?.success('保存个人资料成功！')
+  showEditModal.value = false // 保存后关闭编辑弹窗
+}
+
 const myPosts = [
   {
     id: 1,
@@ -64,7 +103,6 @@ const myPosts = [
 
     <div class="bg-white shadow-sm sticky top-0 z-20 border-b border-gray-100">
       <div class="container mx-auto px-4 relative h-[60px] flex items-center justify-between">
-        
         <div class="flex gap-8 text-gray-600 font-medium">
           <span class="flex items-center gap-1 cursor-pointer text-hikari-pink border-b-2 border-hikari-pink h-[60px]">
             <n-icon :component="CreateOutline"/> 主页
@@ -78,19 +116,11 @@ const myPosts = [
         </div>
 
         <div class="flex gap-6 text-center text-sm items-center">
-          <div>
-            <div class="font-bold text-gray-800">12</div>
-            <div class="text-gray-400 text-xs">关注</div>
-          </div>
-          <div>
-            <div class="font-bold text-gray-800">0</div>
-            <div class="text-gray-400 text-xs">粉丝</div>
-          </div>
-          <n-button size="small" type="primary" secondary round>
+       
+          <n-button size="small" color="#fb7299" secondary round @click="showEditModal = true">
             编辑资料
           </n-button>
         </div>
-
       </div>
     </div>
 
@@ -98,24 +128,29 @@ const myPosts = [
       
       <aside class="lg:col-span-1 space-y-4">
 
-        <div class="-mt-[70px] mb-2 relative z-40 inline-block">
-           <div class="border-4 border-white rounded-xl overflow-hidden shadow-lg bg-white">
-             <n-avatar 
-               shape="square" 
-               :size="140" 
-               :src="userStore.userInfo.avatar" 
-               class="block"
-             />
-           </div>
+        <div class="-mt-[70px] mb-2 relative z-40 inline-block group cursor-pointer" @click="showAvatarModal = true">
+            <div class="border-4 border-white rounded-xl overflow-hidden shadow-lg bg-white relative">
+              <n-avatar 
+                shape="square" 
+                :size="140" 
+                :src="editForm.avatar || userStore.userInfo.avatar" 
+                class="block transition-transform group-hover:scale-105"
+              />
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white">
+                <n-icon size="30" :component="CameraOutline" />
+                <span class="text-xs mt-1 font-bold">更换头像</span>
+              </div>
+            </div>
         </div>
         
         <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <div class="flex items-center justify-between mb-2">
             <span class="font-bold text-gray-700">等级 Lv.{{ userStore.userInfo.level }}</span>
-            <span class="text-xs text-gray-400">经验 233/500</span>
+            <span class="text-xs text-gray-400">经验 {{ userStore.userInfo.currentExp }}/{{ userStore.userInfo.nextLevelExp }}</span>
           </div>
-          <n-progress type="line" :percentage="46" color="#fb7299" :height="6" :show-indicator="false" />
-          
+          <div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden mb-2">
+            <div class="h-full bg-yellow-400 rounded-full transition-all duration-500" :style="{ width: expPercentage }"></div>
+          </div>
           <div class="mt-4 flex flex-wrap gap-2">
             <n-tag size="small" type="warning" round>高级会员</n-tag>
             <n-tag size="small" type="info" round>Galgame 鉴赏家</n-tag>
@@ -129,12 +164,8 @@ const myPosts = [
           </div>
           <div class="flex items-center gap-2 text-gray-600 border-b pb-3">
              <n-icon :component="MaleFemaleOutline" /> 
-             <span>性别: 保密</span>
+             <span>性别: {{ userStore.userInfo.gender || '保密' }}</span>
           </div>
-          <!-- <div class="flex items-center gap-2 text-gray-600 border-b pb-3">
-             <n-icon :component="LocationOutline" /> 
-             <span>IP属地: 未知</span>
-          </div> -->
           <div class="flex items-center gap-2 text-gray-600">
              <n-icon :component="CalendarOutline" /> 
              <span>注册时间: 2025-10-11</span>
@@ -154,38 +185,98 @@ const myPosts = [
       <main class="lg:col-span-3">
         <div class="bg-white rounded-lg shadow-sm border border-gray-100 min-h-[500px]">
           <n-tabs type="segment" animated class="p-4">
-            <n-tab-pane name="dynamic" tab="我的动态">
+            
+            <n-tab-pane name="published" tab="发布内容">
               <div class="space-y-4 mt-2">
                 <PostCard v-for="post in myPosts" :key="post.id" :post="post" />
               </div>
             </n-tab-pane>
             
-            <n-tab-pane name="article" tab="投稿文章">
-               <div class="py-10 text-center text-gray-400">暂无投稿</div>
+            <n-tab-pane name="galgame" tab="Galgame">
+               <div class="py-10 text-center text-gray-400">暂无 Galgame 投稿</div>
             </n-tab-pane>
             
-            <n-tab-pane name="reply" tab="我的回复">
-               <div class="py-10 text-center text-gray-400">暂无回复</div>
+            <n-tab-pane name="favorites_article" tab="我收藏的文章">
+               <div class="py-10 text-center text-gray-400">暂无收藏文章</div>
             </n-tab-pane>
 
-             <n-tab-pane name="setting" tab="编辑资料">
-               <div class="max-w-lg p-4">
-                 <div class="mb-4">
-                   <label class="block text-gray-700 mb-1">昵称</label>
-                   <n-input v-model:value="editForm.name" placeholder="请输入昵称" />
-                 </div>
-                 <div class="mb-4">
-                   <label class="block text-gray-700 mb-1">个性签名</label>
-                   <n-input type="textarea" v-model:value="editForm.bio" placeholder="介绍一下自己" />
-                 </div>
-                 <n-button type="primary" @click="handleSave">保存修改</n-button>
-               </div>
-             </n-tab-pane>
-          </n-tabs>
+            <n-tab-pane name="favorites_novel" tab="轻小说收藏">
+               <div class="py-10 text-center text-gray-400">暂无轻小说收藏</div>
+            </n-tab-pane>
+
+             </n-tabs>
         </div>
       </main>
 
     </div>
+
+    <n-modal v-model:show="showEditModal">
+      <n-card
+        style="width: 500px"
+        title="编辑个人资料"
+        :bordered="false"
+        size="huge"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div class="space-y-6">
+          <div class="flex justify-center mb-4">
+            <div class="relative group cursor-pointer" @click="showAvatarModal = true">
+               <n-avatar shape="square" :size="100" :src="editForm.avatar || userStore.userInfo.avatar" class="rounded-xl border-2 border-gray-100" />
+               <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl transition flex items-center justify-center text-white">
+                 <n-icon size="24" :component="CameraOutline" />
+               </div>
+            </div>
+          </div>
+
+          <n-form label-placement="left" label-width="80">
+            <n-form-item label="昵称">
+              <n-input v-model:value="editForm.name" placeholder="请输入昵称" />
+            </n-form-item>
+            <n-form-item label="性别">
+              <n-select v-model:value="editForm.gender" :options="genderOptions" placeholder="请选择性别" />
+            </n-form-item>
+            <n-form-item label="个性签名">
+              <n-input type="textarea" v-model:value="editForm.bio" placeholder="介绍一下自己" :rows="3" />
+            </n-form-item>
+          </n-form>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <n-button @click="showEditModal = false">取消</n-button>
+            <n-button color="#fb7299" @click="handleSave">保存修改</n-button>
+          </div>
+        </template>
+      </n-card>
+    </n-modal>
+
+    <n-modal v-model:show="showAvatarModal">
+      <n-card
+        style="width: 400px"
+        title="选择你喜欢的头像"
+        :bordered="false"
+        size="huge"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div class="grid grid-cols-2 gap-4 justify-items-center">
+          <div 
+            v-for="(url, index) in presetAvatars" 
+            :key="index"
+            @click="selectAvatar(url)"
+            class="cursor-pointer rounded-xl p-1 border-4 transition hover:scale-105 shadow-sm"
+            :class="editForm.avatar === url ? 'border-hikari-pink' : 'border-transparent hover:border-gray-200'"
+          >
+            <n-avatar shape="square" :size="90" :src="url" class="rounded-lg" />
+          </div>
+        </div>
+        <div class="mt-6 text-center text-gray-400 text-xs">
+          点击头像即可选中
+        </div>
+      </n-card>
+    </n-modal>
+
   </div>
 </template>
 

@@ -1,51 +1,52 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NTabs, NTabPane, NInput, NButton, NCheckbox, NIcon } from 'naive-ui'
+import { NTabs, NTabPane, NInput, NButton, NCheckbox, NIcon, useMessage } from 'naive-ui'
 import { PersonOutline, LockClosedOutline, MailOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
-const route = useRoute()
-const userStore = useUserStore() // 获取仓库
+const route = useRoute() // 1. 获取当前路由对象
+const userStore = useUserStore()
+const message = useMessage() // 建议使用 Naive UI 的 message 组件
 
 const activeTab = ref('login')
 
 // === 1. 登录表单数据 ===
 const loginForm = ref({ username: '', password: '' })
 
-// === 2. 注册表单数据 (新增) ===
+// === 2. 注册表单数据 ===
 const registerForm = ref({ nickname: '', email: '', password: '' })
 
 // 处理登录
 const handleLogin = () => {
   if (!loginForm.value.username || !loginForm.value.password) {
-    window.$message?.warning('请输入账号和密码')
+    message.warning('请输入账号和密码')
     return
   }
   userStore.login(loginForm.value.username)
+  message.success(`欢迎回来，${loginForm.value.username}`)
   
-  // 跳转
-  const jumpUrl = route.query.jumpTo || '/'
-  router.push(jumpUrl)
+  // === 2. 修改跳转逻辑 ===
+  // 优先读取 URL 中的 redirect 参数，如果没有则跳回首页
+  // 例如：/login?redirect=/galgame -> 登录后跳到 /galgame
+  const redirectPath = route.query.redirect || '/'
+  router.push(redirectPath)
 }
 
-// === 处理注册 (新增) ===
+// 处理注册
 const handleRegister = () => {
-  // 简单校验
   if (!registerForm.value.nickname || !registerForm.value.email || !registerForm.value.password) {
-    window.$message?.warning('请填写完整的注册信息') // 如果没配 MessageProvider，这行可能不弹窗
+    message.warning('请填写完整的注册信息')
     return
   }
 
-  // 调用 Store 的注册方法
   userStore.register(registerForm.value.nickname, registerForm.value.email)
+  message.success(`注册成功！欢迎你，${registerForm.value.nickname}`)
 
-  // 模拟注册成功提示
-  alert(`注册成功！欢迎你，${registerForm.value.nickname}`)
-
-  // 注册成功后，直接跳转首页
-  router.push('/')
+  // === 3. 注册成功后也支持回跳 (可选，体验更好) ===
+  const redirectPath = route.query.redirect || '/'
+  router.push(redirectPath)
 }
 </script>
 

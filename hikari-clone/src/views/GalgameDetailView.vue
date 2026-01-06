@@ -1,7 +1,10 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NIcon, NTag, NImage, NImageGroup, NRate, NProgress, NAvatar, NDivider } from 'naive-ui'
+import { 
+  NButton, NIcon, NTag, NImage, NImageGroup, NRate, NProgress, 
+  NAvatar, NDivider, NInput, useMessage 
+} from 'naive-ui'
 import { 
   PlayCircleOutline, 
   CheckmarkCircleOutline, 
@@ -9,13 +12,42 @@ import {
   HeartOutline, 
   ShareSocialOutline,
   ArrowBackOutline,
-  Star
+  Star,
+  ChatbubbleOutline,
+  CreateOutline
 } from '@vicons/ionicons5'
+import { useUserStore } from '../stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const message = useMessage()
+const userStore = useUserStore()
 
-// 模拟 Galgame 数据 (实际应根据 route.params.id 从 API 获取)
+// === 新增：用户状态管理 ===
+const userStatus = ref('') // 'wish', 'playing', 'played'
+
+const handleStatusChange = (status) => {
+  if (userStatus.value === status) {
+    // 取消状态
+    userStatus.value = ''
+    message.info('已取消标记')
+  } else {
+    // 设置状态
+    userStatus.value = status
+    const msgMap = {
+      wish: '已标记为：想玩',
+      playing: '已标记为：在玩',
+      played: '已标记为：玩过'
+    }
+    message.success(msgMap[status])
+  }
+}
+
+const handleShare = () => {
+  message.success('链接已复制到剪贴板')
+}
+
+// 模拟 Galgame 数据
 const game = ref({
   id: route.params.id,
   title: '天使☆騒々 RE-BOOT!',
@@ -25,7 +57,6 @@ const game = ref({
   price: '9,800円',
   platform: 'PC (Windows)',
   website: 'http://yuzu-soft.com/',
-  score: 9.8,
   tags: ['废萌', '喜剧', '恋爱', '柚子社', '纯爱'],
   description: `
     <p>“乃亚，可以拜托你去那个世界吗？”</p>
@@ -33,9 +64,7 @@ const game = ref({
     <p>乃亚因为某个意外失去了力量，请求李空协助她。而李空虽然也是个普通学生，却有着某种特殊的体质……</p>
     <p>就这样，充满骚乱与心动的同居生活开始了！</p>
   `,
-  // 背景图/封面
   cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
-  // CG 画廊
   gallery: [
     'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
     'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg',
@@ -44,14 +73,100 @@ const game = ref({
   ]
 })
 
-// 评分分布数据
-const ratingDistribution = [
-  { label: '10', percent: 60 },
-  { label: '9', percent: 25 },
-  { label: '8', percent: 10 },
-  { label: '7', percent: 3 },
-  { label: '6', percent: 2 },
-]
+// === 1. 评论/评分数据源 ===
+const reviews = ref([
+  { 
+    id: 1, 
+    user: '纯爱战神', 
+    avatar: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', 
+    content: '柚子社依旧稳定发挥，这作的人设真的太戳我了！乃亚天下第一！', 
+    score: 5, 
+    time: '2小时前' 
+  },
+  { 
+    id: 2, 
+    user: 'Gal萌新', 
+    avatar: 'G', 
+    content: '剧情稍微有点白开水，但是画风满分。', 
+    score: 4, 
+    time: '1天前' 
+  },
+  { 
+    id: 3, 
+    user: 'YuzuFan', 
+    avatar: 'Y', 
+    content: '音乐非常好听，推荐游玩。', 
+    score: 5, 
+    time: '3天前' 
+  }
+])
+
+// === 2. 动态计算平均分 ===
+const averageScore = computed(() => {
+  if (reviews.value.length === 0) return 0
+  const total = reviews.value.reduce((sum, item) => sum + item.score, 0)
+  return (total / reviews.value.length).toFixed(1)
+})
+
+// === 3. 动态计算评分分布 ===
+const ratingDistribution = computed(() => {
+  const total = reviews.value.length
+  if (total === 0) return []
+  
+  const dist = { 5:0, 4:0, 3:0, 2:0, 1:0 }
+  reviews.value.forEach(r => {
+    const s = Math.round(r.score)
+    if(dist[s] !== undefined) dist[s]++
+  })
+
+  return [
+    { label: '5星', percent: (dist[5] / total) * 100 },
+    { label: '4星', percent: (dist[4] / total) * 100 },
+    { label: '3星', percent: (dist[3] / total) * 100 },
+    { label: '2星', percent: (dist[2] / total) * 100 },
+    { label: '1星', percent: (dist[1] / total) * 100 },
+  ]
+})
+
+// === 4. 发表评价逻辑 ===
+const commentContent = ref('')
+const userRating = ref(0)
+
+const isAvatarUrl = (str) => {
+  return str && (str.startsWith('http') || str.startsWith('blob:') || str.startsWith('data:image'))
+}
+
+const submitReview = () => {
+  if (!userStore.userInfo) {
+    message.warning('请登录后再进行评价')
+    router.push('/login')
+    return
+  }
+  if (userRating.value === 0) {
+    message.warning('请点击星星进行打分')
+    return
+  }
+  if (!commentContent.value.trim()) {
+    message.warning('评价内容不能为空')
+    return
+  }
+
+  const userAvatar = userStore.userInfo.avatar || userStore.userInfo.name.charAt(0).toUpperCase()
+
+  const newReview = {
+    id: Date.now(),
+    user: userStore.userInfo.name,
+    avatar: userAvatar,
+    content: commentContent.value,
+    score: userRating.value,
+    time: '刚刚'
+  }
+
+  reviews.value.unshift(newReview)
+  commentContent.value = ''
+  userRating.value = 0
+  message.success('评价发表成功！')
+}
 </script>
 
 <template>
@@ -59,7 +174,8 @@ const ratingDistribution = [
     
     <div class="fixed inset-0 z-0">
       <img :src="game.cover" class="w-full h-full object-cover blur-3xl opacity-60 scale-110">
-      <div class="absolute inset-0 bg-black/40"></div> </div>
+      <div class="absolute inset-0 bg-black/40"></div> 
+    </div>
 
     <div class="relative z-10 container mx-auto px-4 py-10 max-w-6xl">
       
@@ -80,19 +196,44 @@ const ratingDistribution = [
           <h2 class="text-lg text-white/60 mb-6 font-medium">{{ game.originalTitle }}</h2>
           
           <div class="flex flex-wrap gap-4 mb-8">
-            <n-button color="#f87171" size="large" class="w-32 font-bold shadow-lg shadow-red-500/30">
+            
+            <n-button 
+              @click="handleStatusChange('wish')"
+              :type="userStatus === 'wish' ? 'error' : 'default'"
+              :secondary="userStatus !== 'wish'"
+              :color="userStatus === 'wish' ? undefined : '#f87171'" 
+              size="large" 
+              class="w-32 font-bold shadow-lg shadow-red-500/30"
+            >
               <template #icon><n-icon :component="HeartOutline" /></template>
-              想玩
+              {{ userStatus === 'wish' ? '已标记' : '想玩' }}
             </n-button>
-            <n-button color="#60a5fa" size="large" class="w-32 font-bold shadow-lg shadow-blue-500/30">
+
+            <n-button 
+              @click="handleStatusChange('playing')"
+              :type="userStatus === 'playing' ? 'info' : 'default'"
+              :secondary="userStatus !== 'playing'"
+              :color="userStatus === 'playing' ? undefined : '#60a5fa'" 
+              size="large" 
+              class="w-32 font-bold shadow-lg shadow-blue-500/30"
+            >
               <template #icon><n-icon :component="PlayCircleOutline" /></template>
-              在玩
+              {{ userStatus === 'playing' ? '在玩中' : '在玩' }}
             </n-button>
-            <n-button color="#34d399" size="large" class="w-32 font-bold shadow-lg shadow-green-500/30">
+
+            <n-button 
+              @click="handleStatusChange('played')"
+              :type="userStatus === 'played' ? 'primary' : 'default'"
+              :secondary="userStatus !== 'played'"
+              :color="userStatus === 'played' ? '#34d399' : '#34d399'" 
+              size="large" 
+              class="w-32 font-bold shadow-lg shadow-green-500/30"
+            >
               <template #icon><n-icon :component="CheckmarkCircleOutline" /></template>
-              玩过
+              {{ userStatus === 'played' ? '已玩过' : '玩过' }}
             </n-button>
-            <n-button secondary circle class="text-white bg-white/10 hover:bg-white/20 border-none">
+
+            <n-button @click="handleShare" secondary circle class="text-white bg-white/10 hover:bg-white/20 border-none">
               <template #icon><n-icon :component="ShareSocialOutline" /></template>
             </n-button>
           </div>
@@ -122,18 +263,18 @@ const ratingDistribution = [
           </div>
 
           <div class="bg-black/30 backdrop-blur-md rounded-xl p-6 border border-white/10">
-            <h3 class="font-bold text-lg mb-4 border-l-4 border-yellow-400 pl-3">班固米评分</h3>
+            <h3 class="font-bold text-lg mb-4 border-l-4 border-yellow-400 pl-3">用户评分</h3>
             <div class="flex items-end gap-2 mb-4">
-              <span class="text-5xl font-bold text-yellow-400">{{ game.score }}</span>
+              <span class="text-5xl font-bold text-yellow-400">{{ averageScore }}</span>
               <div class="pb-2">
-                <n-rate readonly :default-value="5" size="small" />
-                <p class="text-xs text-gray-400">2390 人评分</p>
+                <n-rate readonly :default-value="Number(averageScore)" allow-half size="small" />
+                <p class="text-xs text-gray-400">{{ reviews.length }} 人评价</p>
               </div>
             </div>
             
             <div class="space-y-2">
               <div v-for="item in ratingDistribution" :key="item.label" class="flex items-center gap-3 text-xs">
-                <span class="w-4 text-right text-gray-400">{{ item.label }}</span>
+                <span class="w-8 text-right text-gray-400">{{ item.label }}</span>
                 <n-progress 
                   type="line" 
                   :percentage="item.percent" 
@@ -174,18 +315,65 @@ const ratingDistribution = [
           </div>
 
           <div class="bg-black/30 backdrop-blur-md rounded-xl p-6 border border-white/10">
-            <h3 class="font-bold text-lg mb-4">最新评论</h3>
-            <div class="flex gap-4">
-              <n-avatar round src="https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg" />
-              <div>
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="font-bold text-sm">纯爱战神</span>
-                  <n-rate readonly :default-value="5" size="small" />
-                  <span class="text-xs text-gray-500">2小时前</span>
+            <h3 class="font-bold text-lg mb-6 flex items-center gap-2">
+              <n-icon :component="ChatbubbleOutline" /> 玩家评价
+            </h3>
+
+            <div class="bg-white/5 p-5 rounded-xl mb-8 border border-white/10">
+               <div class="flex gap-4">
+                 <n-avatar round :size="48" :src="userStore.userInfo ? userStore.userInfo.avatar : 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg'" class="bg-gray-700"/>
+                 <div class="flex-grow">
+                   <div class="flex items-center gap-3 mb-3">
+                     <span class="text-sm text-gray-400 font-bold">点击打分:</span>
+                     <n-rate v-model:value="userRating" allow-half />
+                     <span v-if="userRating > 0" class="text-yellow-400 font-bold text-sm ml-1">{{ userRating }} 分</span>
+                   </div>
+                   
+                   <n-input 
+                     v-model:value="commentContent"
+                     type="textarea" 
+                     placeholder="玩过之后感觉如何？分享你的评价吧..." 
+                     :rows="3" 
+                     class="bg-black/20 text-white border border-white/10 rounded-lg placeholder-gray-500"
+                   />
+                   
+                   <div class="mt-3 text-right">
+                     <n-button type="primary" color="#fb7299" @click="submitReview">
+                       <template #icon><n-icon :component="CreateOutline" /></template>
+                       {{ userStore.userInfo ? '发布评价' : '登录后评价' }}
+                     </n-button>
+                   </div>
+                 </div>
+               </div>
+            </div>
+
+            <div class="space-y-6">
+              <div v-for="review in reviews" :key="review.id" class="flex gap-4 pb-6 border-b border-white/5 last:border-0 last:pb-0">
+                
+                <n-avatar 
+                  round 
+                  :src="isAvatarUrl(review.avatar) ? review.avatar : undefined"
+                  class="flex-shrink-0"
+                  :class="isAvatarUrl(review.avatar) ? '' : 'bg-hikari-blue text-white font-bold'"
+                >
+                  {{ isAvatarUrl(review.avatar) ? '' : review.avatar }}
+                </n-avatar>
+
+                <div class="flex-grow">
+                  <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-sm text-white">{{ review.user }}</span>
+                      <n-rate readonly :default-value="review.score" size="small" class="scale-75 origin-left" />
+                    </div>
+                    <span class="text-xs text-gray-500">{{ review.time }}</span>
+                  </div>
+                  <p class="text-sm text-gray-300 leading-relaxed">
+                    {{ review.content }}
+                  </p>
                 </div>
-                <p class="text-sm text-gray-300">柚子社依旧稳定发挥，这作的人设真的太戳我了！乃亚天下第一！</p>
               </div>
             </div>
+
           </div>
 
         </main>
@@ -212,5 +400,12 @@ const ratingDistribution = [
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+:deep(.n-input) {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+}
+:deep(.n-input__textarea-el) {
+  color: #eee !important;
 }
 </style>

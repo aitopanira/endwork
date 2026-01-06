@@ -1,25 +1,145 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NIcon, NTag, NImage, NRate, NAvatar, NDivider, NTabs, NTabPane } from 'naive-ui'
+import { 
+  NButton, NIcon, NTag, NRate, NAvatar, NDivider, NInput, useMessage, NProgress 
+} from 'naive-ui'
 import { 
   BookOutline, 
   HeartOutline, 
+  Heart, // 新增：实心爱心
   ArrowBackOutline, 
   ShareSocialOutline, 
   EyeOutline,
   PersonOutline,
   CreateOutline,
   ChatbubbleOutline,
-  ListOutline
+  ListOutline,
+  Star,
+  DownloadOutline,
+  CheckmarkCircleOutline, // 新增：空心勾选
+  CheckmarkCircle // 新增：实心勾选
 } from '@vicons/ionicons5'
 import { useResourceStore } from '../stores/resources'
+import { useUserStore } from '../stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const message = useMessage()
 const resourceStore = useResourceStore()
+const userStore = useUserStore()
 
 const novel = ref(null)
+const commentInputRef = ref(null)
+
+// === 新增：状态管理 ===
+const isFavorited = ref(false)
+const isRead = ref(false)
+
+// === 新增：交互逻辑 ===
+const handleFavorite = () => {
+  // 这里后续可以连接后端 API 更新状态
+  isFavorited.value = !isFavorited.value
+  if (isFavorited.value) {
+    message.success('收藏成功！已加入书架')
+  } else {
+    message.info('已取消收藏')
+  }
+}
+
+const handleMarkAsRead = () => {
+  // 这里后续可以连接后端 API 更新状态
+  isRead.value = !isRead.value
+  if (isRead.value) {
+    message.success('标记为已看过')
+  } else {
+    message.info('取消看过状态')
+  }
+}
+
+// === 1. 评论与评分数据 ===
+const reviews = ref([
+  { 
+    id: 1, 
+    user: '败犬女主爱好者', 
+    avatar: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', 
+    content: '八奈见杏菜真的太可爱了！老八党头顶青天！', 
+    score: 5, 
+    time: '2小时前' 
+  },
+  { 
+    id: 2, 
+    user: '轻小说中毒', 
+    avatar: '轻', 
+    content: '雨森焚火老师的文笔很细腻，这一卷的感情描写更进一步了。', 
+    score: 4.5, 
+    time: '1天前' 
+  },
+  { 
+    id: 3, 
+    user: '路人B', 
+    avatar: 'B', 
+    content: '什么时候出下一卷啊，急急急。', 
+    score: 4, 
+    time: '3天前' 
+  }
+])
+
+const averageScore = computed(() => {
+  if (reviews.value.length === 0) return 0
+  const total = reviews.value.reduce((sum, item) => sum + item.score, 0)
+  return (total / reviews.value.length).toFixed(1)
+})
+
+// === 2. 发表评论逻辑 ===
+const commentContent = ref('')
+const userRating = ref(0)
+
+const isAvatarUrl = (str) => {
+  return str && (str.startsWith('http') || str.startsWith('blob:') || str.startsWith('data:image'))
+}
+
+const submitReview = () => {
+  if (!userStore.userInfo) {
+    message.warning('请登录后再进行评价')
+    router.push('/login')
+    return
+  }
+  if (userRating.value === 0) {
+    message.warning('请点击星星进行打分')
+    return
+  }
+  if (!commentContent.value.trim()) {
+    message.warning('评价内容不能为空')
+    return
+  }
+
+  const userAvatar = userStore.userInfo.avatar || userStore.userInfo.name.charAt(0).toUpperCase()
+  const newReview = {
+    id: Date.now(),
+    user: userStore.userInfo.name,
+    avatar: userAvatar,
+    content: commentContent.value,
+    score: userRating.value,
+    time: '刚刚'
+  }
+
+  reviews.value.unshift(newReview)
+  commentContent.value = ''
+  userRating.value = 0
+  message.success('评价发表成功！')
+}
+
+// === 3. 锚点跳转逻辑 ===
+const scrollToComments = () => {
+  const commentSection = document.getElementById('comment-section')
+  if (commentSection) {
+    commentSection.scrollIntoView({ behavior: 'smooth' })
+    nextTick(() => {
+      if(commentInputRef.value) commentInputRef.value.focus()
+    })
+  }
+}
 
 onMounted(() => {
   const found = resourceStore.getNovelById(route.params.id)
@@ -44,16 +164,14 @@ onMounted(() => {
   }
 })
 
-// 跳转到阅读页
 const handleStartReading = () => {
   router.push({
-    name: 'reader', // 确保你的 router 中定义了 name: 'reader'
+    name: 'reader', 
     params: { id: novel.value.id },
     query: { title: novel.value.title }
   })
 }
 
-// 跳转到特定卷
 const handleReadVolume = (volumeId) => {
   router.push({
     name: 'reader',
@@ -99,20 +217,47 @@ const handleReadVolume = (volumeId) => {
              <span class="bg-blue-500/80 backdrop-blur-md text-white text-xs px-2 py-1 rounded flex items-center gap-1">
                <n-icon :component="EyeOutline"/> {{ novel.readCount }}
              </span>
+             <span class="bg-yellow-500/90 backdrop-blur-md text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+               <n-icon :component="Star"/> {{ averageScore }}
+             </span>
              <span v-for="tag in novel.tags" :key="tag" class="bg-white/20 backdrop-blur-md text-white text-xs px-3 py-1 rounded hover:bg-white/30 cursor-pointer transition">
                {{ tag }}
              </span>
           </div>
 
-          <div class="flex gap-4 pt-4">
-            <n-button type="primary" color="#f87171" size="large" class="w-32 shadow-lg font-bold">
-               <template #icon><n-icon :component="HeartOutline" /></template>
-               收藏
+          <div class="flex flex-wrap gap-4 pt-4">
+            
+            <n-button 
+              type="primary" 
+              :color="isFavorited ? '#ef4444' : '#f87171'" 
+              size="large" 
+              class="w-32 shadow-lg font-bold"
+              @click="handleFavorite"
+            >
+               <template #icon>
+                 <n-icon :component="isFavorited ? Heart : HeartOutline" />
+               </template>
+               {{ isFavorited ? '已收藏' : '收藏' }}
             </n-button>
-            <n-button color="#26a69a" size="large" class="w-32 shadow-lg font-bold">
+
+            <n-button 
+              type="primary"
+              :color="isRead ? '#059669' : '#34d399'"
+              size="large" 
+              class="w-32 shadow-lg font-bold"
+              @click="handleMarkAsRead"
+            >
+               <template #icon>
+                 <n-icon :component="isRead ? CheckmarkCircle : CheckmarkCircleOutline" />
+               </template>
+               {{ isRead ? '已看过' : '看过' }}
+            </n-button>
+
+            <n-button color="#26a69a" size="large" class="w-32 shadow-lg font-bold" @click="scrollToComments">
                <template #icon><n-icon :component="CreateOutline" /></template>
                写评价
             </n-button>
+
             <n-button 
               @click="handleStartReading"
               type="primary" 
@@ -205,13 +350,72 @@ const handleReadVolume = (volumeId) => {
 
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div id="comment-section" class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
            <h3 class="font-bold text-lg text-gray-800 mb-6 flex items-center gap-2">
-             <n-icon :component="ChatbubbleOutline" class="text-green-500"/> 评论
+             <n-icon :component="ChatbubbleOutline" class="text-green-500"/> 评论区
            </h3>
-           <div class="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-gray-400">
-             暂无评论，快来抢沙发吧~
+           
+           <div class="bg-gray-50 p-6 rounded-xl mb-8 border border-gray-100">
+             <div class="flex gap-4">
+               <n-avatar round :size="48" :src="userStore.userInfo ? userStore.userInfo.avatar : 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg'" />
+               <div class="flex-grow">
+                 <div class="mb-3 flex items-center gap-3">
+                   <span class="text-sm text-gray-500 font-bold">打分:</span>
+                   <n-rate v-model:value="userRating" allow-half />
+                   <span v-if="userRating > 0" class="text-yellow-500 font-bold ml-2">{{ userRating }} 分</span>
+                 </div>
+                 
+                 <n-input 
+                   ref="commentInputRef"
+                   v-model:value="commentContent"
+                   type="textarea" 
+                   placeholder="读完这本书感觉如何？快来写下你的评价吧..." 
+                   :rows="3" 
+                   class="bg-white"
+                 />
+                 
+                 <div class="mt-3 text-right">
+                   <n-button type="primary" color="#26a69a" @click="submitReview" :disabled="!userStore.userInfo">
+                     <template #icon><n-icon :component="CreateOutline" /></template>
+                     {{ userStore.userInfo ? '发布评价' : '登录后评价' }}
+                   </n-button>
+                 </div>
+               </div>
+             </div>
            </div>
+
+           <div class="space-y-6">
+             <div v-for="review in reviews" :key="review.id" class="flex gap-4 pb-6 border-b border-gray-50 last:border-0 last:pb-0">
+               <n-avatar 
+                 round 
+                 :src="isAvatarUrl(review.avatar) ? review.avatar : undefined"
+                 class="flex-shrink-0"
+                 :class="isAvatarUrl(review.avatar) ? '' : 'bg-green-100 text-green-600 font-bold'"
+               >
+                 {{ isAvatarUrl(review.avatar) ? '' : review.avatar }}
+               </n-avatar>
+
+               <div class="flex-grow">
+                 <div class="flex justify-between items-start mb-1">
+                   <div>
+                     <div class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                       {{ review.user }}
+                       <n-rate readonly :default-value="review.score" size="small" class="scale-75 origin-left" />
+                     </div>
+                     <div class="text-xs text-gray-400 mt-0.5">{{ review.time }}</div>
+                   </div>
+                   <div class="text-yellow-500 font-bold text-lg leading-none">
+                     {{ review.score }}
+                   </div>
+                 </div>
+                 
+                 <p class="text-gray-600 text-sm mt-2 leading-relaxed bg-gray-50 p-3 rounded-lg">
+                   {{ review.content }}
+                 </p>
+               </div>
+             </div>
+           </div>
+
         </div>
 
       </div>

@@ -15,6 +15,7 @@ import ReaderView from '@/views/ReaderView.vue'
 import CreatorCenterView from '@/views/CreatorCenterView.vue'
 import TopicDetailView from '@/views/TopicDetailView.vue'
 import SectionDetailView from '@/views/SectionDetailView.vue'
+import UserLibraryView from '@/views/UserLibraryView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL), 
@@ -93,7 +94,13 @@ const router = createRouter({
       path: '/community/section/:id',
       name: 'section-detail',
       component: SectionDetailView
-    }
+    },
+    {
+      path: '/library',
+      name: 'library',
+      component: UserLibraryView,
+      meta: { requiresAuth: true } // 标记需要登录
+    },
   ],
 
 })

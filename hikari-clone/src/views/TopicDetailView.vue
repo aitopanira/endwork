@@ -142,8 +142,7 @@ const goBack = () => {
               <h3 class="font-bold text-gray-800 text-lg mb-1">{{ userStore.userInfo.name }}</h3>
               
               <div class="flex justify-center gap-4 text-sm text-gray-500 mb-6">
-                <div class="flex flex-col"><span class="font-bold text-gray-800">0</span> 关注</div>
-                <div class="flex flex-col"><span class="font-bold text-gray-800">0</span> 粉丝</div>
+                <div class="flex flex-col"><span class="font-bold text-gray-800">0</span> 收藏</div>
                 <div class="flex flex-col"><span class="font-bold text-gray-800">0</span> 发布</div>
               </div>
               

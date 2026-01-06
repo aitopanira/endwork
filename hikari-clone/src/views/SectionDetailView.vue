@@ -100,8 +100,7 @@ const goToPost = (id) => {
              <n-avatar round :size="80" :src="userStore.userInfo.avatar" class="mb-4 border-2 border-white shadow-md" />
              <h3 class="font-bold text-gray-800 text-lg mb-4">{{ userStore.userInfo.name }}</h3>
              <div class="flex justify-center gap-6 text-sm text-gray-500 mb-6">
-               <div class="flex flex-col"><span class="font-bold text-gray-800">0</span> 关注</div>
-               <div class="flex flex-col"><span class="font-bold text-gray-800">0</span> 粉丝</div>
+               <div class="flex flex-col"><span class="font-bold text-gray-800">0</span> 收藏</div>
                <div class="flex flex-col"><span class="font-bold text-gray-800">0</span> 发布</div>
              </div>
              <div class="space-y-3">
@@ -149,10 +148,10 @@ const goToPost = (id) => {
                  <div class="flex-grow min-w-0">
                     <div class="flex justify-between items-start">
                        <h1 class="text-2xl font-bold mb-2 text-white shadow-black drop-shadow-md">{{ sectionInfo.title }}</h1>
-                       <n-button size="small" ghost color="#fff" class="font-bold">
+                       <!-- <n-button size="small" ghost color="#fff" class="font-bold">
                           <template #icon><n-icon><PersonAddOutline /></n-icon></template>
                           关注
-                       </n-button>
+                       </n-button> -->
                     </div>
                     
                     <p class="text-gray-200 text-xs leading-relaxed line-clamp-3 mb-3 text-shadow">

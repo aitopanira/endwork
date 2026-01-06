@@ -1,20 +1,21 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { NCarousel, NAvatar, NIcon } from 'naive-ui' 
+import { NCarousel, NAvatar, NIcon, useMessage } from 'naive-ui' 
 import { EyeOutline, HeartOutline, GameControllerOutline, BookOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user' 
 import PostCard from '../components/PostCard.vue'
 
 const userStore = useUserStore()
 const router = useRouter()
+const message = useMessage() // 引入 message
 
 // 1. 状态控制：当前激活的 Tab ('galgame' 或 'novel')
 const activeReviewTab = ref('galgame')
 
 // 通用跳转函数
 const goToDetail = (id, type = 'post') => {
-if (type === 'game' || type === 'galgame') {
+  if (type === 'game' || type === 'galgame') {
     router.push(`/galgame/${id}`)
   } else if (type === 'book' || type === 'novel') {
     router.push(`/novel/${id}`)
@@ -23,6 +24,29 @@ if (type === 'game' || type === 'galgame') {
     router.push(`/post/${id}`)
   }
 }
+
+// === 新增：处理签到 ===
+const handleSignIn = () => {
+  if (!userStore.userInfo) {
+    router.push('/login')
+    return
+  }
+  // 调用 store 中的签到方法
+  const result = userStore.signIn()
+  if (result.success) {
+    message.success(result.msg)
+  } else {
+    message.warning(result.msg)
+  }
+}
+
+// === 新增：计算经验条百分比 ===
+const expPercentage = computed(() => {
+  if (!userStore.userInfo) return '0%'
+  const pct = (userStore.userInfo.currentExp / userStore.userInfo.nextLevelExp) * 100
+  return Math.min(pct, 100).toFixed(1) + '%'
+})
+
 // 轮播图数据
 const banners = [
   'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
@@ -461,32 +485,55 @@ const posts = ref([
 
     <aside class="lg:col-span-1 space-y-6">
         <div class="sticky top-24 space-y-8">
-      <div v-if="userStore.userInfo" class="bg-white p-5 rounded-lg shadow-sm animate-fade-in">
+      
+      <div v-if="userStore.userInfo" class="bg-white p-5 rounded-lg shadow-sm animate-fade-in relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-hikari-pink to-hikari-blue"></div>
+
         <div class="flex items-center gap-4 mb-4">
-          <n-avatar round :size="50" :src="userStore.userInfo.avatar" class="border border-gray-200" />
-          <div>
-            <h3 class="font-bold text-gray-800">{{ userStore.userInfo.name }}</h3>
-            <p class="text-xs text-yellow-500 bg-yellow-50 px-2 py-0.5 rounded-full inline-block mt-1">
-              Lv.{{ userStore.userInfo.level }} 高级会员
-            </p>
+          <n-avatar round :size="50" :src="userStore.userInfo.avatar" class="border-2 border-white shadow-sm" />
+          <div class="flex-grow">
+            <h3 class="font-bold text-gray-800 text-base">{{ userStore.userInfo.name }}</h3>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="text-xs text-white bg-yellow-400 px-2 py-0.5 rounded shadow-sm">
+                Lv.{{ userStore.userInfo.level }}
+              </span>
+              <div class="h-2 flex-grow bg-gray-100 rounded-full overflow-hidden">
+                <div 
+                  class="h-full bg-yellow-400 rounded-full transition-all duration-500" 
+                  :style="{ width: expPercentage }"
+                ></div>
+              </div>
+            </div>
+            <div class="text-[10px] text-gray-400 text-right mt-0.5">
+              {{ userStore.userInfo.currentExp }} / {{ userStore.userInfo.nextLevelExp }}
+            </div>
           </div>
         </div>
-        <div class="grid grid-cols-3 gap-2 text-center mb-4">
-          <div class="bg-gray-50 rounded py-2 cursor-pointer hover:bg-gray-100">
+
+        <div class="grid grid-cols-3 gap-2 text-center mb-5 border-t border-gray-50 pt-4">
+          <div class="cursor-pointer hover:bg-gray-50 rounded py-1 transition">
             <span class="block font-bold text-gray-700 text-sm">0</span>
             <span class="text-xs text-gray-400">动态</span>
           </div>
-          <div class="bg-gray-50 rounded py-2 cursor-pointer hover:bg-gray-100">
+          <div class="cursor-pointer hover:bg-gray-50 rounded py-1 transition">
             <span class="block font-bold text-gray-700 text-sm">12</span>
-            <span class="text-xs text-gray-400">关注</span>
+            <span class="text-xs text-gray-400">收藏</span>
           </div>
-          <div class="bg-gray-50 rounded py-2 cursor-pointer hover:bg-gray-100">
-            <span class="block font-bold text-gray-700 text-sm">{{ userStore.userInfo.coin }}</span>
-            <span class="text-xs text-gray-400">硬币</span>
+          <div class="cursor-pointer hover:bg-gray-50 rounded py-1 transition">
+            <span class="block font-bold text-gray-700 text-sm">{{ userStore.userInfo.currentExp }}</span>
+            <span class="text-xs text-gray-400">经验</span>
           </div>
         </div>
-        <button class="w-full bg-hikari-pink text-white py-2 rounded-full hover:bg-pink-600 transition text-sm shadow-md">
-          签到领币
+
+        <button 
+          @click="handleSignIn"
+          :disabled="userStore.userInfo.isSignedToday"
+          class="w-full py-2 rounded-full transition text-sm shadow-md font-bold flex items-center justify-center gap-2"
+          :class="userStore.userInfo.isSignedToday 
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+            : 'bg-gradient-to-r from-hikari-pink to-pink-500 text-white hover:shadow-lg hover:-translate-y-0.5 transform'"
+        >
+          <span>{{ userStore.userInfo.isSignedToday ? '✨ 今日已签到' : '📅 签到领经验' }}</span>
         </button>
       </div>
 
