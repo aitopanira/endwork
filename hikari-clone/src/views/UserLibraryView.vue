@@ -9,10 +9,9 @@ import {
   GameControllerOutline, 
   DocumentTextOutline, 
   HeartOutline, 
-  TimeOutline, 
   CheckmarkCircleOutline,
   ArrowForwardOutline,
-  LibraryOutline // 新增图书馆图标
+  LibraryOutline 
 } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
 
@@ -51,53 +50,6 @@ const menuThemeOverrides = {
   itemIconColorHover: '#fb7299'
 }
 
-// === 模拟数据 ===
-
-// Galgame 数据
-const galgameData = {
-  wish: [
-    { id: 101, title: '樱之诗', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', dev: '枕' },
-    { id: 102, title: '夏日口袋', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', dev: 'Key' }
-  ],
-  playing: [
-    { id: 103, title: '天使☆骚骚 RE-BOOT!', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', dev: 'YUZUSOFT', progress: '共通线' }
-  ],
-  played: [
-    { id: 104, title: '千恋＊万花', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', dev: 'YUZUSOFT', score: 9.5 }
-  ]
-}
-
-// 轻小说数据
-const novelData = {
-  favorites: [
-    { id: 201, title: '败犬女主太多了！', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', author: '雨森焚火' },
-    { id: 202, title: '也就是弹幕游戏', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', author: '镰池和马' }
-  ],
-  read: [
-    { id: 203, title: '刀剑神域', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', author: '川原砾' }
-  ]
-}
-
-// 文章收藏数据
-const favArticles = ref([
-  { 
-    id: 1, 
-    title: '【Gal周报】十二月新作本周发售，《缘起甜韵》登陆Steam', 
-    author: '官方Bot', 
-    avatar: '官',
-    summary: '十二月新作已于本周发售，一共有五部作品，其中PC平台有四部作品...',
-    time: '2025-12-24'
-  },
-  { 
-    id: 2, 
-    title: '关于“剧情作”与“废萌作”的深度解析', 
-    author: '老二次元', 
-    avatar: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg',
-    summary: '最近看到很多人争论剧情和画风哪个重要，其实我觉得...',
-    time: '2025-12-20'
-  }
-])
-
 const goToDetail = (path) => router.push(path)
 </script>
 
@@ -135,9 +87,9 @@ const goToDetail = (path) => router.push(path)
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 min-h-[500px]">
           <n-tabs type="line" animated size="large" justify-content="start" class="px-6 pt-4">
             
-            <n-tab-pane name="playing" tab="在玩 (1)">
-              <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 py-6">
-                <div v-for="game in galgameData.playing" :key="game.id" class="group cursor-pointer" @click="goToDetail(`/galgame/${game.id}`)">
+            <n-tab-pane name="playing" :tab="`在玩 (${userStore.galgameLibrary.playing.length})`">
+              <div v-if="userStore.galgameLibrary.playing.length > 0" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 py-6">
+                <div v-for="game in userStore.galgameLibrary.playing" :key="game.id" class="group cursor-pointer" @click="goToDetail(`/galgame/${game.id}`)">
                   <div class="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 shadow-md border border-gray-100">
                     <img :src="game.cover" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
                     <div class="absolute bottom-0 inset-x-0 bg-black/60 p-2 text-center">
@@ -148,11 +100,12 @@ const goToDetail = (path) => router.push(path)
                   <p class="text-xs text-gray-400">{{ game.dev }}</p>
                 </div>
               </div>
+              <n-empty v-else description="暂无在玩的游戏" class="py-20" />
             </n-tab-pane>
 
-            <n-tab-pane name="wish" tab="想玩 (2)">
-              <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 py-6">
-                <div v-for="game in galgameData.wish" :key="game.id" class="group cursor-pointer" @click="goToDetail(`/galgame/${game.id}`)">
+            <n-tab-pane name="wish" :tab="`想玩 (${userStore.galgameLibrary.wish.length})`">
+              <div v-if="userStore.galgameLibrary.wish.length > 0" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 py-6">
+                <div v-for="game in userStore.galgameLibrary.wish" :key="game.id" class="group cursor-pointer" @click="goToDetail(`/galgame/${game.id}`)">
                   <div class="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 shadow-md border border-gray-100">
                     <img :src="game.cover" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
                     <div class="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-sm">
@@ -163,21 +116,23 @@ const goToDetail = (path) => router.push(path)
                   <p class="text-xs text-gray-400">{{ game.dev }}</p>
                 </div>
               </div>
+              <n-empty v-else description="暂无想玩的游戏" class="py-20" />
             </n-tab-pane>
 
-            <n-tab-pane name="played" tab="玩过 (1)">
-              <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 py-6">
-                <div v-for="game in galgameData.played" :key="game.id" class="group cursor-pointer" @click="goToDetail(`/galgame/${game.id}`)">
+            <n-tab-pane name="played" :tab="`玩过 (${userStore.galgameLibrary.played.length})`">
+              <div v-if="userStore.galgameLibrary.played.length > 0" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 py-6">
+                <div v-for="game in userStore.galgameLibrary.played" :key="game.id" class="group cursor-pointer" @click="goToDetail(`/galgame/${game.id}`)">
                   <div class="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 shadow-md border border-gray-100">
                     <img :src="game.cover" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
                     <div class="absolute top-2 right-2 bg-yellow-400 text-white text-xs font-bold px-1.5 py-0.5 rounded shadow-sm">
-                      {{ game.score }}
+                      {{ game.score || '-' }}
                     </div>
                   </div>
                   <h3 class="font-bold text-gray-800 text-sm truncate group-hover:text-hikari-pink transition">{{ game.title }}</h3>
                   <p class="text-xs text-gray-400">{{ game.dev }}</p>
                 </div>
               </div>
+              <n-empty v-else description="暂无玩过的游戏" class="py-20" />
             </n-tab-pane>
 
           </n-tabs>
@@ -193,9 +148,9 @@ const goToDetail = (path) => router.push(path)
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 min-h-[500px]">
           <n-tabs type="line" animated size="large" justify-content="start" class="px-6 pt-4">
             
-            <n-tab-pane name="fav" tab="我的收藏">
-              <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 py-6">
-                <div v-for="book in novelData.favorites" :key="book.id" class="group cursor-pointer" @click="goToDetail(`/novel/${book.id}`)">
+            <n-tab-pane name="fav" :tab="`我的收藏 (${userStore.novelLibrary.favorites.length})`">
+              <div v-if="userStore.novelLibrary.favorites.length > 0" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 py-6">
+                <div v-for="book in userStore.novelLibrary.favorites" :key="book.id" class="group cursor-pointer" @click="goToDetail(`/novel/${book.id}`)">
                   <div class="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 shadow-md border border-gray-100">
                     <img :src="book.cover" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
                   </div>
@@ -203,11 +158,12 @@ const goToDetail = (path) => router.push(path)
                   <p class="text-xs text-gray-400">{{ book.author }}</p>
                 </div>
               </div>
+              <n-empty v-else description="暂无收藏的书籍" class="py-20" />
             </n-tab-pane>
 
-            <n-tab-pane name="read" tab="已读书籍">
-              <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 py-6">
-                <div v-for="book in novelData.read" :key="book.id" class="group cursor-pointer" @click="goToDetail(`/novel/${book.id}`)">
+            <n-tab-pane name="read" :tab="`已读书籍 (${userStore.novelLibrary.read.length})`">
+              <div v-if="userStore.novelLibrary.read.length > 0" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 py-6">
+                <div v-for="book in userStore.novelLibrary.read" :key="book.id" class="group cursor-pointer" @click="goToDetail(`/novel/${book.id}`)">
                   <div class="relative rounded-lg overflow-hidden aspect-[2/3] mb-3 shadow-md border border-gray-100 grayscale group-hover:grayscale-0 transition duration-500">
                     <img :src="book.cover" class="w-full h-full object-cover">
                     <div class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition">
@@ -218,6 +174,7 @@ const goToDetail = (path) => router.push(path)
                   <p class="text-xs text-gray-400">{{ book.author }}</p>
                 </div>
               </div>
+              <n-empty v-else description="暂无已读书籍" class="py-20" />
             </n-tab-pane>
 
           </n-tabs>
@@ -227,13 +184,13 @@ const goToDetail = (path) => router.push(path)
       <div v-if="activeKey === 'articles'" class="max-w-4xl mx-auto space-y-6">
         <div class="flex justify-between items-end mb-2">
           <h2 class="text-2xl font-bold text-gray-800">文章收藏夹</h2>
-          <span class="text-gray-400 text-sm">共 {{ favArticles.length }} 篇</span>
+          <span class="text-gray-400 text-sm">共 {{ userStore.articleLibrary.length }} 篇</span>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div v-if="favArticles.length > 0">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
+          <div v-if="userStore.articleLibrary.length > 0">
             <div 
-              v-for="post in favArticles" 
+              v-for="post in userStore.articleLibrary" 
               :key="post.id" 
               @click="goToDetail(`/post/${post.id}`)"
               class="p-6 border-b border-gray-50 hover:bg-pink-50/30 transition cursor-pointer flex gap-4 group"
@@ -244,8 +201,8 @@ const goToDetail = (path) => router.push(path)
                 
                 <div class="flex items-center gap-3 text-xs text-gray-400">
                   <div class="flex items-center gap-1.5">
-                    <n-avatar round :size="16" :src="post.avatar.startsWith('http') ? post.avatar : undefined" class="bg-gray-200">
-                      {{ post.avatar.startsWith('http') ? '' : post.avatar }}
+                    <n-avatar round :size="16" :src="post.avatar && post.avatar.startsWith('http') ? post.avatar : undefined" class="bg-gray-200">
+                      {{ post.avatar && post.avatar.startsWith('http') ? '' : (post.avatar || '文') }}
                     </n-avatar>
                     <span>{{ post.author }}</span>
                   </div>

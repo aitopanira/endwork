@@ -7,7 +7,7 @@ import {
 import { 
   BookOutline, 
   HeartOutline, 
-  Heart, // 新增：实心爱心
+  Heart, 
   ArrowBackOutline, 
   ShareSocialOutline, 
   EyeOutline,
@@ -17,8 +17,8 @@ import {
   ListOutline,
   Star,
   DownloadOutline,
-  CheckmarkCircleOutline, // 新增：空心勾选
-  CheckmarkCircle // 新增：实心勾选
+  CheckmarkCircleOutline, 
+  CheckmarkCircle 
 } from '@vicons/ionicons5'
 import { useResourceStore } from '../stores/resources'
 import { useUserStore } from '../stores/user'
@@ -32,15 +32,27 @@ const userStore = useUserStore()
 const novel = ref(null)
 const commentInputRef = ref(null)
 
-// === 新增：状态管理 ===
-const isFavorited = ref(false)
-const isRead = ref(false)
+// === 核心：从 Store 获取状态 ===
+const isFavorited = computed(() => {
+  if (!novel.value || !userStore.userInfo) return false
+  return userStore.novelLibrary.favorites.some(n => n.id === novel.value.id)
+})
 
-// === 新增：交互逻辑 ===
+const isRead = computed(() => {
+  if (!novel.value || !userStore.userInfo) return false
+  return userStore.novelLibrary.read.some(n => n.id === novel.value.id)
+})
+
+// === 交互：处理状态切换 ===
 const handleFavorite = () => {
-  // 这里后续可以连接后端 API 更新状态
-  isFavorited.value = !isFavorited.value
-  if (isFavorited.value) {
+  if (!userStore.userInfo) {
+    message.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  
+  const isAdded = userStore.toggleNovelFavorite(novel.value)
+  if (isAdded) {
     message.success('收藏成功！已加入书架')
   } else {
     message.info('已取消收藏')
@@ -48,9 +60,14 @@ const handleFavorite = () => {
 }
 
 const handleMarkAsRead = () => {
-  // 这里后续可以连接后端 API 更新状态
-  isRead.value = !isRead.value
-  if (isRead.value) {
+  if (!userStore.userInfo) {
+    message.warning('请先登录')
+    router.push('/login')
+    return
+  }
+
+  const isAdded = userStore.toggleNovelRead(novel.value)
+  if (isAdded) {
     message.success('标记为已看过')
   } else {
     message.info('取消看过状态')
@@ -142,7 +159,10 @@ const scrollToComments = () => {
 }
 
 onMounted(() => {
-  const found = resourceStore.getNovelById(route.params.id)
+  // 转换 ID 为数字，确保匹配正确
+  const novelId = Number(route.params.id)
+  const found = resourceStore.getNovelById(novelId)
+  
   if (found) {
     novel.value = {
       ...found,

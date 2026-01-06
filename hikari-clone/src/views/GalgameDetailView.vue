@@ -23,33 +23,12 @@ const router = useRouter()
 const message = useMessage()
 const userStore = useUserStore()
 
-// === 新增：用户状态管理 ===
-const userStatus = ref('') // 'wish', 'playing', 'played'
-
-const handleStatusChange = (status) => {
-  if (userStatus.value === status) {
-    // 取消状态
-    userStatus.value = ''
-    message.info('已取消标记')
-  } else {
-    // 设置状态
-    userStatus.value = status
-    const msgMap = {
-      wish: '已标记为：想玩',
-      playing: '已标记为：在玩',
-      played: '已标记为：玩过'
-    }
-    message.success(msgMap[status])
-  }
-}
-
-const handleShare = () => {
-  message.success('链接已复制到剪贴板')
-}
+// 统一 ID 类型为数字，确保与 Store 中存储的 ID 匹配
+const gameId = Number(route.params.id)
 
 // 模拟 Galgame 数据
 const game = ref({
-  id: route.params.id,
+  id: gameId,
   title: '天使☆騒々 RE-BOOT!',
   originalTitle: '天使☆騒々 RE-BOOT!',
   developer: 'YUZUSOFT (柚子社)',
@@ -72,6 +51,44 @@ const game = ref({
     'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg',
   ]
 })
+
+// === 核心：从 Store 获取当前状态 ===
+const currentStatus = computed(() => {
+  if (!userStore.userInfo) return ''
+  // 检查该游戏是否在对应的列表中
+  if (userStore.galgameLibrary.wish.some(g => g.id === gameId)) return 'wish'
+  if (userStore.galgameLibrary.playing.some(g => g.id === gameId)) return 'playing'
+  if (userStore.galgameLibrary.played.some(g => g.id === gameId)) return 'played'
+  return ''
+})
+
+// === 交互：处理状态切换 ===
+const handleStatusChange = (status) => {
+  if (!userStore.userInfo) {
+    message.warning('请先登录')
+    router.push('/login')
+    return
+  }
+
+  // 如果点击的是当前已激活的状态，则表示取消
+  if (currentStatus.value === status) {
+    userStore.setGalgameStatus(game.value, null) // 传入 null 清除状态
+    message.info('已取消标记')
+  } else {
+    // 否则设置为新状态
+    userStore.setGalgameStatus(game.value, status)
+    const msgMap = {
+      wish: '已加入愿望单',
+      playing: '开始记录游玩进度',
+      played: '标记为已玩过'
+    }
+    message.success(msgMap[status])
+  }
+}
+
+const handleShare = () => {
+  message.success('链接已复制到剪贴板')
+}
 
 // === 1. 评论/评分数据源 ===
 const reviews = ref([
@@ -199,38 +216,38 @@ const submitReview = () => {
             
             <n-button 
               @click="handleStatusChange('wish')"
-              :type="userStatus === 'wish' ? 'error' : 'default'"
-              :secondary="userStatus !== 'wish'"
-              :color="userStatus === 'wish' ? undefined : '#f87171'" 
+              :type="currentStatus === 'wish' ? 'error' : 'default'"
+              :secondary="currentStatus !== 'wish'"
+              :color="currentStatus === 'wish' ? undefined : '#f87171'" 
               size="large" 
               class="w-32 font-bold shadow-lg shadow-red-500/30"
             >
               <template #icon><n-icon :component="HeartOutline" /></template>
-              {{ userStatus === 'wish' ? '已标记' : '想玩' }}
+              {{ currentStatus === 'wish' ? '已标记' : '想玩' }}
             </n-button>
 
             <n-button 
               @click="handleStatusChange('playing')"
-              :type="userStatus === 'playing' ? 'info' : 'default'"
-              :secondary="userStatus !== 'playing'"
-              :color="userStatus === 'playing' ? undefined : '#60a5fa'" 
+              :type="currentStatus === 'playing' ? 'info' : 'default'"
+              :secondary="currentStatus !== 'playing'"
+              :color="currentStatus === 'playing' ? undefined : '#60a5fa'" 
               size="large" 
               class="w-32 font-bold shadow-lg shadow-blue-500/30"
             >
               <template #icon><n-icon :component="PlayCircleOutline" /></template>
-              {{ userStatus === 'playing' ? '在玩中' : '在玩' }}
+              {{ currentStatus === 'playing' ? '在玩中' : '在玩' }}
             </n-button>
 
             <n-button 
               @click="handleStatusChange('played')"
-              :type="userStatus === 'played' ? 'primary' : 'default'"
-              :secondary="userStatus !== 'played'"
-              :color="userStatus === 'played' ? '#34d399' : '#34d399'" 
+              :type="currentStatus === 'played' ? 'primary' : 'default'"
+              :secondary="currentStatus !== 'played'"
+              :color="currentStatus === 'played' ? '#34d399' : '#34d399'" 
               size="large" 
               class="w-32 font-bold shadow-lg shadow-green-500/30"
             >
               <template #icon><n-icon :component="CheckmarkCircleOutline" /></template>
-              {{ userStatus === 'played' ? '已玩过' : '玩过' }}
+              {{ currentStatus === 'played' ? '已玩过' : '玩过' }}
             </n-button>
 
             <n-button @click="handleShare" secondary circle class="text-white bg-white/10 hover:bg-white/20 border-none">
@@ -402,6 +419,7 @@ const submitReview = () => {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 强制修改 Naive UI Input 在暗色下的样式 */
 :deep(.n-input) {
   background-color: rgba(0, 0, 0, 0.2) !important;
 }

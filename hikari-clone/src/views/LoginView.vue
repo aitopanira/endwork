@@ -4,13 +4,15 @@ import { useRouter, useRoute } from 'vue-router'
 import { NTabs, NTabPane, NInput, NButton, NCheckbox, NIcon, useMessage } from 'naive-ui'
 import { PersonOutline, LockClosedOutline, MailOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
+// import axios from 'axios' // 真实对接后端时请取消注释
 
 const router = useRouter()
-const route = useRoute() // 1. 获取当前路由对象
+const route = useRoute()
 const userStore = useUserStore()
-const message = useMessage() // 建议使用 Naive UI 的 message 组件
+const message = useMessage()
 
 const activeTab = ref('login')
+const isLoading = ref(false) // 控制登录按钮的加载状态
 
 // === 1. 登录表单数据 ===
 const loginForm = ref({ username: '', password: '' })
@@ -19,19 +21,51 @@ const loginForm = ref({ username: '', password: '' })
 const registerForm = ref({ nickname: '', email: '', password: '' })
 
 // 处理登录
-const handleLogin = () => {
+const handleLogin = async () => {
+  // 1. 基础非空校验
   if (!loginForm.value.username || !loginForm.value.password) {
     message.warning('请输入账号和密码')
     return
   }
-  userStore.login(loginForm.value.username)
-  message.success(`欢迎回来，${loginForm.value.username}`)
-  
-  // === 2. 修改跳转逻辑 ===
-  // 优先读取 URL 中的 redirect 参数，如果没有则跳回首页
-  // 例如：/login?redirect=/galgame -> 登录后跳到 /galgame
-  const redirectPath = route.query.redirect || '/'
-  router.push(redirectPath)
+
+  isLoading.value = true // 开始加载（按钮转圈）
+
+  try {
+    // ==========================================================
+    //  TODO: 这里对接你的真实后端
+    // ==========================================================
+    //   const res = await axios.post('/http://127.0.0.1:8000/userinfo', {
+    //   username: loginForm.value.username,
+    //   password: loginForm.value.password
+    // })
+    // 假设后端返回 code 200 表示成功
+    // if (res.data.code !== 200) throw new Error(res.data.msg)
+    
+
+    // // --- 👇【当前模拟逻辑：仅供测试】👇 ---
+    await new Promise(resolve => setTimeout(resolve, 800)) // 模拟网络延迟 0.8秒
+    
+    // // 硬编码验证：只有账号 admin 且密码 123456 能过
+    if (loginForm.value.username !== 'admin' || loginForm.value.password !== '123456') {
+       throw new Error('账号或密码错误 (测试号: admin, 密码: 123456)')
+    }
+    // --- 👆【模拟结束】👆 ---
+
+    // 2. 验证通过：更新状态
+    userStore.login(loginForm.value.username)
+    message.success(`欢迎回来，${loginForm.value.username}`)
+    
+    // 3. 跳转逻辑：优先跳回原来的页面，否则跳去首页
+    const redirectPath = route.query.redirect || '/'
+    router.push(redirectPath)
+
+  } catch (error) {
+    // 4. 失败处理
+    console.error(error)
+    message.error(error.message || '登录失败，请稍后重试')
+  } finally {
+    isLoading.value = false // 结束加载
+  }
 }
 
 // 处理注册
@@ -41,10 +75,10 @@ const handleRegister = () => {
     return
   }
 
+  // 这里建议同样加上 loading 和后端请求逻辑
   userStore.register(registerForm.value.nickname, registerForm.value.email)
   message.success(`注册成功！欢迎你，${registerForm.value.nickname}`)
 
-  // === 3. 注册成功后也支持回跳 (可选，体验更好) ===
   const redirectPath = route.query.redirect || '/'
   router.push(redirectPath)
 }
@@ -70,10 +104,10 @@ const handleRegister = () => {
         
         <n-tab-pane name="login" tab="登 录">
           <form class="mt-6 space-y-6" @submit.prevent="handleLogin">
-            <n-input v-model:value="loginForm.username" placeholder="账号 / 邮箱" size="large" round>
+            <n-input v-model:value="loginForm.username" placeholder="账号 / 邮箱 (admin)" size="large" round>
               <template #prefix><n-icon :component="PersonOutline" class="text-gray-500" /></template>
             </n-input>
-            <n-input v-model:value="loginForm.password" type="password" show-password-on="click" placeholder="密码" size="large" round>
+            <n-input v-model:value="loginForm.password" type="password" show-password-on="click" placeholder="密码 (123456)" size="large" round>
               <template #prefix><n-icon :component="LockClosedOutline" class="text-gray-500" /></template>
             </n-input>
 
@@ -82,8 +116,20 @@ const handleRegister = () => {
               <a href="#" class="text-gray-500 hover:text-hikari-pink transition">忘记密码?</a>
             </div>
 
-            <n-button attr-type="submit" type="primary" block round size="large" color="#fb7299" class="shadow-lg">
-              <span class="font-bold tracking-widest">进入社区</span>
+            <n-button 
+              attr-type="submit" 
+              type="primary" 
+              block 
+              round 
+              size="large" 
+              color="#fb7299" 
+              class="shadow-lg"
+              :loading="isLoading"
+              :disabled="isLoading"
+            >
+              <span class="font-bold tracking-widest">
+                {{ isLoading ? '登录中...' : '进入社区' }}
+              </span>
             </n-button>
           </form>
         </n-tab-pane>

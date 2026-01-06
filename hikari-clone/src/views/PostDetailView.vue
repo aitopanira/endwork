@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NBreadcrumb, NBreadcrumbItem, NTag, NDivider, NAvatar, NButton, NInput, NIcon, useMessage } from 'naive-ui'
 import { EyeOutline, ChatbubbleOutline, TimeOutline, PersonOutline, HeartOutline, StarOutline, Star } from '@vicons/ionicons5'
@@ -9,16 +9,22 @@ const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const userStore = useUserStore()
-const postId = route.params.id
+
+// 转换 ID 为数字，确保与 Store 中存储的 ID 类型一致
+const postId = Number(route.params.id)
 
 // 模拟文章数据
 const article = ref({
   id: postId,
   title: '【Gal周报】十二月新作本周发售，《缘起甜韵》登陆Steam',
   author: '官方Bot',
+  // 补充头像字段，用于收藏列表展示
+  avatar: '官', 
   date: '2025-12-24',
   views: 2390,
   likes: 128,
+  // 补充简介字段，用于收藏列表展示 (如果没有，store 会自动截取 content)
+  summary: '十二月新作已于本周发售，一共有五部作品，其中PC平台有四部作品。这也是本年度最后的一波发售热潮...',
   content: `
     <p class="mb-4">十二月新作已于本周发售，一共有五部作品，其中PC平台有四部作品。这也是本年度最后的一波发售热潮，各位玩家准备好了吗？</p>
     <h3 class="text-xl font-bold my-4 border-l-4 border-pink-400 pl-3">本周重点推荐</h3>
@@ -37,19 +43,31 @@ const article = ref({
   tags: ['Galgame', '资讯', 'SMEE', 'Steam']
 })
 
-// 模拟评论数据 (回退为简单的文字头像)
+// 模拟评论数据
 const comments = ref([
   { id: 1, user: '路人A', content: 'SMEE！我的超人！钱包已经准备好了。', time: '2小时前', avatar: '路' }, 
   { id: 2, user: '纯爱战神', content: '这画风真的很顶，希望汉化质量能在线。', time: '5小时前', avatar: '纯' }, 
   { id: 3, user: 'HikariAdmin', content: '感谢搬运，已加入愿望单。', time: '1天前', avatar: 'H' } 
 ])
 
-// 收藏状态
-const isFavorited = ref(false)
+// === 核心：从 Store 获取收藏状态 ===
+const isFavorited = computed(() => {
+  if (!userStore.userInfo) return false
+  return userStore.articleLibrary.some(a => a.id === article.value.id)
+})
 
+// === 交互：处理收藏/取消收藏 ===
 const handleFavorite = () => {
-  isFavorited.value = !isFavorited.value
-  if (isFavorited.value) {
+  if (!userStore.userInfo) {
+    message.warning('请先登录')
+    router.push('/login')
+    return
+  }
+
+  // 调用 Store 方法
+  const isAdded = userStore.toggleArticleFavorite(article.value)
+  
+  if (isAdded) {
     message.success('收藏成功！已加入收藏夹')
     article.value.likes++ 
   } else {
@@ -73,8 +91,6 @@ const submitComment = () => {
     return
   }
 
-  // === 回退逻辑：直接使用用户名的首字母作为头像 ===
-  // 这样无论用户头像是什么链接，这里都统一显示简洁的文字头像
   const userAvatarChar = userStore.userInfo.name.charAt(0).toUpperCase()
 
   const newComment = {

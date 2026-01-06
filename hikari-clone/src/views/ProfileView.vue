@@ -10,8 +10,7 @@ import {
   CalendarOutline, 
   IdCardOutline,
   MaleFemaleOutline,
-  CameraOutline,
-  PencilOutline // 新增笔图标
+  CameraOutline
 } from '@vicons/ionicons5'
 import PostCard from '../components/PostCard.vue'
 
@@ -26,7 +25,7 @@ onMounted(() => {
 
 // 控制弹窗显示
 const showAvatarModal = ref(false)
-const showEditModal = ref(false) // 新增：控制编辑资料弹窗
+const showEditModal = ref(false)
 
 const expPercentage = computed(() => {
   if (!userStore.userInfo) return '0%'
@@ -55,11 +54,9 @@ const genderOptions = [
   { label: '沃尔玛购物袋', value: '沃尔玛购物袋' }
 ]
 
-// 选择头像
 const selectAvatar = (url) => {
   editForm.value.avatar = url
   showAvatarModal.value = false 
-  // 如果是从编辑资料弹窗打开的，选择后不关闭编辑弹窗，只关闭头像选择
 }
 
 const handleSave = () => {
@@ -70,7 +67,7 @@ const handleSave = () => {
     avatar: editForm.value.avatar
   })
   window.$message?.success('保存个人资料成功！')
-  showEditModal.value = false // 保存后关闭编辑弹窗
+  showEditModal.value = false 
 }
 
 const myPosts = [
@@ -186,25 +183,21 @@ const myPosts = [
         <div class="bg-white rounded-lg shadow-sm border border-gray-100 min-h-[500px]">
           <n-tabs type="segment" animated class="p-4">
             
-            <n-tab-pane name="published" tab="发布内容">
+            <n-tab-pane name="articles" tab="发布文章">
               <div class="space-y-4 mt-2">
                 <PostCard v-for="post in myPosts" :key="post.id" :post="post" />
               </div>
             </n-tab-pane>
             
-            <n-tab-pane name="galgame" tab="Galgame">
+            <n-tab-pane name="galgames" tab="发布Galgame">
                <div class="py-10 text-center text-gray-400">暂无 Galgame 投稿</div>
             </n-tab-pane>
             
-            <n-tab-pane name="favorites_article" tab="我收藏的文章">
-               <div class="py-10 text-center text-gray-400">暂无收藏文章</div>
+            <n-tab-pane name="novels" tab="发布轻小说">
+               <div class="py-10 text-center text-gray-400">暂无轻小说投稿</div>
             </n-tab-pane>
 
-            <n-tab-pane name="favorites_novel" tab="轻小说收藏">
-               <div class="py-10 text-center text-gray-400">暂无轻小说收藏</div>
-            </n-tab-pane>
-
-             </n-tabs>
+          </n-tabs>
         </div>
       </main>
 
