@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { NTabs, NTabPane, NInput, NButton, NCheckbox, NIcon, useMessage } from 'naive-ui'
 import { PersonOutline, LockClosedOutline, MailOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
-// import axios from 'axios' // 真实对接后端时请取消注释
+import axios from 'axios' // 真实对接后端时请取消注释
 
 const router = useRouter()
 const route = useRoute()
@@ -34,30 +34,48 @@ const handleLogin = async () => {
     // ==========================================================
     //  TODO: 这里对接你的真实后端
     // ==========================================================
-    //   const res = await axios.post('/http://127.0.0.1:8000/userinfo', {
-    //   username: loginForm.value.username,
-    //   password: loginForm.value.password
-    // })
+      const res = await axios.post('http://127.0.0.1:8000/a/getuser/users/', {
+      username: loginForm.value.username,
+      password: loginForm.value.password
+    })
     // 假设后端返回 code 200 表示成功
-    // if (res.data.code !== 200) throw new Error(res.data.msg)
+    if (res.data.code == 200) 
+    {
+      // 把后端返回的用户信息传进去（假设数据在 res.data.data 里）
+      // 如果你的后端返回结构不一样，请根据 console.log 的结果调整这里
+      userStore.login(res.data.data) 
+      
+      message.success(`欢迎回来，${res.data.data.name || loginForm.value.username}`)
+
+      // 5. 跳转回之前的页面
+      const redirectPath = route.query.redirect || '/'
+      router.push(redirectPath)
+    }
+    else {
+      // 如果 code 不是 200，说明账号密码错误
+      throw new Error(res.data.msg || '登录失败')
+    }
     
 
-    // // --- 👇【当前模拟逻辑：仅供测试】👇 ---
-    await new Promise(resolve => setTimeout(resolve, 800)) // 模拟网络延迟 0.8秒
+   
+   
+   
+    // // // --- 👇【当前模拟逻辑：仅供测试】👇 ---
+    // await new Promise(resolve => setTimeout(resolve, 800)) // 模拟网络延迟 0.8秒
     
-    // // 硬编码验证：只有账号 admin 且密码 123456 能过
-    if (loginForm.value.username !== 'admin' || loginForm.value.password !== '123456') {
-       throw new Error('账号或密码错误 (测试号: admin, 密码: 123456)')
-    }
-    // --- 👆【模拟结束】👆 ---
+    // // // 硬编码验证：只有账号 admin 且密码 123456 能过
+    // if (loginForm.value.username !== 'admin' || loginForm.value.password !== '123456') {
+    //    throw new Error('账号或密码错误 (测试号: admin, 密码: 123456)')
+    // }
+    // // --- 👆【模拟结束】👆 ---
 
     // 2. 验证通过：更新状态
-    userStore.login(loginForm.value.username)
-    message.success(`欢迎回来，${loginForm.value.username}`)
+    // userStore.login(userStore.login(res.data.data))
+    // message.success(`欢迎回来，${loginForm.value.username}`)
     
     // 3. 跳转逻辑：优先跳回原来的页面，否则跳去首页
-    const redirectPath = route.query.redirect || '/'
-    router.push(redirectPath)
+    // const redirectPath = route.query.redirect || '/'
+    // router.push(redirectPath)
 
   } catch (error) {
     // 4. 失败处理
