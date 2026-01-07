@@ -20,6 +20,25 @@ class UserViewSet(viewsets.ModelViewSet):
         user, created = UserInfo.objects.get_or_create(name=username)
         serializer = self.get_serializer(user)
         return Response({'status': 'success', 'user': serializer.data})
+    @action(detail=False, methods=['post'])
+    def register(self, request):
+        username = request.data.get('nickname')
+        password= request.data.get('password')
+        # 2. 检查必填字段
+        if not username or not password:
+            return Response({'status': 'error', 'msg': '用户名和密码不能为空'}, status=400)
+        # 3. 检查用户名是否已存在
+        if UserInfo.objects.filter(name=username).exists():
+            return Response({'status': 'error', 'msg': '该昵称已被占用，请换一个'}, status=400)
+        # 4. 创建新用户
+        new_user = UserInfo.objects.create(
+            name=username,
+            password=password, # ⚠️ 实际生产环境请使用 make_password(password) 加密存储
+            level=1,
+            exp=0,
+            bio="萌新报到！"
+        )
+        return Response({'status': 'success', 'msg': '注册成功，请去登录', 'username': new_user.name})
 
 # === 标签视图 (之前报错缺失的部分) ===
 class TagViewSet(viewsets.ModelViewSet):

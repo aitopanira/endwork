@@ -10,6 +10,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserInfo
         fields = ['id','name','avatar','bio','level','exp','is_signed_today']
+        extra_kwargs = {'password': {'write_only': True}}
 
 class GalgameSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)

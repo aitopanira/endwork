@@ -2,9 +2,9 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { NTabs, NTabPane, NInput, NButton, NCheckbox, NIcon, useMessage } from 'naive-ui'
-import { PersonOutline, LockClosedOutline, MailOutline } from '@vicons/ionicons5'
+import { PersonOutline, LockClosedOutline } from '@vicons/ionicons5' // 去掉了 MailOutline
 import { useUserStore } from '../stores/user'
-import axios from 'axios' // 真实对接后端时请取消注释
+import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,93 +12,100 @@ const userStore = useUserStore()
 const message = useMessage()
 
 const activeTab = ref('login')
-const isLoading = ref(false) // 控制登录按钮的加载状态
+const isLoading = ref(false)
 
 // === 1. 登录表单数据 ===
 const loginForm = ref({ username: '', password: '' })
 
-// === 2. 注册表单数据 ===
-const registerForm = ref({ nickname: '', email: '', password: '' })
+// === 2. 注册表单数据 (修改：去掉了 email，加了 confirmPassword) ===
+const registerForm = ref({ 
+  nickname: '', 
+  password: '', 
+  confirmPassword: '' // 新增：确认密码
+})
 
 // 处理登录
 const handleLogin = async () => {
-  // 1. 基础非空校验
   if (!loginForm.value.username || !loginForm.value.password) {
     message.warning('请输入账号和密码')
     return
   }
 
-  isLoading.value = true // 开始加载（按钮转圈）
+  isLoading.value = true 
 
   try {
-    // ==========================================================
-    //  TODO: 这里对接你的真实后端
-    // ==========================================================
-      const res = await axios.post('http://127.0.0.1:8000/a/getuser/users/', {
+    const res = await axios.post('http://127.0.0.1:8000/a/users/login/', {
       username: loginForm.value.username,
-      password: loginForm.value.password
+      // password: loginForm.value.password 
     })
-    // 假设后端返回 code 200 表示成功
-    if (res.data.code == 200) 
-    {
-      // 把后端返回的用户信息传进去（假设数据在 res.data.data 里）
-      // 如果你的后端返回结构不一样，请根据 console.log 的结果调整这里
-      userStore.login(res.data.data) 
-      
-      message.success(`欢迎回来，${res.data.data.name || loginForm.value.username}`)
 
-      // 5. 跳转回之前的页面
+    if (res.data.status === 'success') {
+      userStore.login(res.data.user)
+      message.success(`欢迎回来，${res.data.user.name || loginForm.value.username}`)
+      
       const redirectPath = route.query.redirect || '/'
       router.push(redirectPath)
+    } else {
+      throw new Error('登录状态异常')
     }
-    else {
-      // 如果 code 不是 200，说明账号密码错误
-      throw new Error(res.data.msg || '登录失败')
-    }
-    
-
-   
-   
-   
-    // // // --- 👇【当前模拟逻辑：仅供测试】👇 ---
-    // await new Promise(resolve => setTimeout(resolve, 800)) // 模拟网络延迟 0.8秒
-    
-    // // // 硬编码验证：只有账号 admin 且密码 123456 能过
-    // if (loginForm.value.username !== 'admin' || loginForm.value.password !== '123456') {
-    //    throw new Error('账号或密码错误 (测试号: admin, 密码: 123456)')
-    // }
-    // // --- 👆【模拟结束】👆 ---
-
-    // 2. 验证通过：更新状态
-    // userStore.login(userStore.login(res.data.data))
-    // message.success(`欢迎回来，${loginForm.value.username}`)
-    
-    // 3. 跳转逻辑：优先跳回原来的页面，否则跳去首页
-    // const redirectPath = route.query.redirect || '/'
-    // router.push(redirectPath)
 
   } catch (error) {
-    // 4. 失败处理
     console.error(error)
-    message.error(error.message || '登录失败，请稍后重试')
+    const errorMsg = error.response?.data?.detail || error.message || '登录失败'
+    message.error(errorMsg)
   } finally {
-    isLoading.value = false // 结束加载
+    isLoading.value = false 
   }
 }
 
 // 处理注册
-const handleRegister = () => {
-  if (!registerForm.value.nickname || !registerForm.value.email || !registerForm.value.password) {
+const handleRegister = async () => {
+  // 1. 基础非空校验 (修改：检查 confirmPassword)
+  if (!registerForm.value.nickname || !registerForm.value.password || !registerForm.value.confirmPassword) {
     message.warning('请填写完整的注册信息')
     return
   }
+console.log(registerForm.value);
+  // 2. 新增：密码一致性校验
+  if (registerForm.value.password !== registerForm.value.confirmPassword) {
+    message.error('两次输入的密码不一致，请检查')
+    return
+  }
 
-  // 这里建议同样加上 loading 和后端请求逻辑
-  userStore.register(registerForm.value.nickname, registerForm.value.email)
-  message.success(`注册成功！欢迎你，${registerForm.value.nickname}`)
+  isLoading.value = true
 
-  const redirectPath = route.query.redirect || '/'
-  router.push(redirectPath)
+  try {
+    // 3. 发送注册请求 (去掉了 email)
+    const res = await axios.post('http://127.0.0.1:8000/a/users/register/', {
+      nickname: registerForm.value.nickname,
+      password: registerForm.value.password
+      // email: ... 后端还没存，这里就不发了
+    })
+
+    console.log('注册返回:', res.data)
+
+    if (res.data.status === 'success') {
+      message.success('注册成功！请登录')
+      
+      // 自动切回登录 Tab，并填好账号
+      activeTab.value = 'login'
+      loginForm.value.username = registerForm.value.nickname
+      loginForm.value.password = '' 
+      
+      // 清空注册表单
+      registerForm.value = { nickname: '', password: '', confirmPassword: '' }
+      
+    } else {
+      throw new Error(res.data.msg || '注册失败')
+    }
+
+  } catch (error) {
+    console.error(error)
+    const errorMsg = error.response?.data?.msg || error.message || '注册请求失败'
+    message.error(errorMsg)
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
 
@@ -122,10 +129,10 @@ const handleRegister = () => {
         
         <n-tab-pane name="login" tab="登 录">
           <form class="mt-6 space-y-6" @submit.prevent="handleLogin">
-            <n-input v-model:value="loginForm.username" placeholder="账号 / 邮箱 (admin)" size="large" round>
+            <n-input v-model:value="loginForm.username" placeholder="账号 / 昵称" size="large" round>
               <template #prefix><n-icon :component="PersonOutline" class="text-gray-500" /></template>
             </n-input>
-            <n-input v-model:value="loginForm.password" type="password" show-password-on="click" placeholder="密码 (123456)" size="large" round>
+            <n-input v-model:value="loginForm.password" type="password" show-password-on="click" placeholder="密码" size="large" round>
               <template #prefix><n-icon :component="LockClosedOutline" class="text-gray-500" /></template>
             </n-input>
 
@@ -158,11 +165,19 @@ const handleRegister = () => {
               <template #prefix><n-icon :component="PersonOutline" /></template>
             </n-input>
             
-            <n-input v-model:value="registerForm.email" placeholder="邮箱" size="large" round>
-              <template #prefix><n-icon :component="MailOutline" /></template>
+            <n-input v-model:value="registerForm.password" type="password" show-password-on="click" placeholder="设置密码" size="large" round>
+              <template #prefix><n-icon :component="LockClosedOutline" /></template>
             </n-input>
             
-            <n-input v-model:value="registerForm.password" type="password" placeholder="设置密码" size="large" round>
+            <n-input 
+              v-model:value="registerForm.confirmPassword" 
+              type="password" 
+              show-password-on="click" 
+              placeholder="确认密码" 
+              size="large" 
+              round
+              :status="registerForm.confirmPassword && registerForm.password !== registerForm.confirmPassword ? 'error' : undefined"
+            >
               <template #prefix><n-icon :component="LockClosedOutline" /></template>
             </n-input>
             
