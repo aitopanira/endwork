@@ -1,88 +1,100 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NIcon, NTag, NAvatar, NCarousel, NCarouselItem } from 'naive-ui'
+import { NButton, NIcon, NTag, NAvatar, NCarousel, NCarouselItem, NSpin } from 'naive-ui'
 import { 
-  BookOutline, 
-  HeartOutline, 
-  Flame, 
-  TimeOutline, 
-  ChevronForward,
-  ReaderOutline,
-  ImageOutline,
-  ShuffleOutline
+  BookOutline, HeartOutline, Flame, TimeOutline, ChevronForward,
+  ReaderOutline, ImageOutline, ShuffleOutline
 } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
+import axios from 'axios' // 引入 axios
 
 const router = useRouter()
 const userStore = useUserStore()
 
-// === 1. 核心数据源：模拟一个较大的书籍库 ===
-// 只有数据够多，随机推荐才有意义
-const allNovels = [
-  { id: 201, title: '败犬女主太多了！', originalTitle: '負けヒロインが多すぎる！', author: '雨森たきび', label: 'ガガガ文庫', tags: ['校园', '恋爱', '败犬', '搞笑'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', summary: '“哈？你在说谁是败犬？”' },
-  { id: 202, title: '一周一次买下同班同学的那些事', originalTitle: '週に一度クラスメイトを買う話', author: '羽田宇佐', label: '富士見ファンタジア文庫', tags: ['校园', '百合', '恋爱'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', summary: '两个人的关系，从一周5000日元开始。' },
-  { id: 203, title: 'Silent Witch 沉默魔女的秘密', originalTitle: 'サイレント・ウィッチ', author: '依空まつり', label: 'カドカワBOOKS', tags: ['奇幻', '魔法', '校园'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', summary: '虽然是天才魔女，但其实超怕生！' },
-  { id: 204, title: '无职转生 ～到了异世界就拿出真本事～', originalTitle: '無職転生', author: '理不尽な孫の手', label: 'MFブックス', tags: ['异世界', '转生', '后宫', '热血'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', summary: '34岁无职处男尼特族在异世界开启新人生。' },
-  { id: 205, title: 'Re: 从零开始的异世界生活', originalTitle: 'Re:ゼロから始める異世界生活', author: '長月達平', label: 'MF文庫J', tags: ['异世界', '战斗', '循环', '致郁'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', summary: '为了守护重要的人，少年不断对抗绝望的命运。' },
-  { id: 206, title: '魔女之旅', originalTitle: '魔女の旅々', author: '白石定規', label: 'GAノベル', tags: ['奇幻', '旅行', '百合', '治愈'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', summary: '某个地方有一位旅人，她的名字是伊蕾娜。' },
-  { id: 207, title: 'No Game No Life 游戏人生', originalTitle: 'ノーゲーム・ノーライフ', author: '榎宮祐', label: 'MF文庫J', tags: ['异世界', '智斗', '游戏', '后宫'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', summary: '空白兄妹在异世界通过游戏征服一切。' },
-  { id: 208, title: '我们不可能成为恋人！绝对不行！', originalTitle: 'わたしが恋人になれるわけないじゃん、ムリムリ!', author: 'みかみてれん', label: 'ダッシュエックス文庫', tags: ['百合', '校园', '搞笑'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', summary: '虽然嘴上说不行，但身体却很诚实？' },
-  { id: 209, title: '关于邻家的天使大人不知不觉把... ', originalTitle: 'お隣の天使様にいつの間にか駄目人間にされていた件', author: '佐伯さん', label: 'GA文庫', tags: ['恋爱', '校园', '纯爱', '日常'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', summary: '此乃名为焦急的双向暗恋，最棒的纯爱物语。' },
-  { id: 210, title: '青春猪头少年系列', originalTitle: '青春ブタ野郎シリーズ', author: '鴨志田一', label: '電撃文庫', tags: ['校园', '恋爱', '科幻', '催泪'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', summary: '思春期症候群——那是流传在网络上的都市传说。' },
-  { id: 211, title: '欢迎来到实力至上主义的教室', originalTitle: 'ようこそ実力至上主義の教室へ', author: '衣笠彰梧', label: 'MF文庫J', tags: ['校园', '智斗', '推理'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', summary: '真正的实力，究竟是什么？' },
-  { id: 212, title: '86 -不存在的战区-', originalTitle: '86-エイティシックス-', author: '安里アサト', label: '電撃文庫', tags: ['科幻', '战斗', '致郁', '战争'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', summary: '在那片战场上，没有死者——这是官方的谎言。' },
-  { id: 213, title: '千岁同学在波子汽水瓶内', originalTitle: '千歳くんはラムネ瓶のなか', author: '裕夢', label: 'ガガガ文庫', tags: ['校园', '现充', '青春'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', summary: '他是福井县首屈一指的现充，千岁朔。' },
-  { id: 214, title: '刀剑神域', originalTitle: 'ソードアート・オンライン', author: '川原礫', label: '電撃文庫', tags: ['战斗', '科幻', '游戏', '热血'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', summary: '这虽然是游戏，但可不是闹着玩的。' },
-  { id: 215, title: '继母的拖油瓶是我的前女友', originalTitle: '継母の連れ子が元カノだった', author: '紙城境介', label: '角川スニーカー文庫', tags: ['恋爱', '校园', '日常'], cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', summary: '由于父母再婚，分手的恋人变成了义理兄妹。' },
-]
+// === 1. 数据定义 ===
+const allNovels = ref([]) // 现在的全部小说列表（从后端获取）
+const loading = ref(true)
 
-// 2. 状态定义
-const recommendations = ref([]) // 今日推荐（随机变化）
-const activeCategory = ref('校园') // 当前选中的分类
+// 推荐列表和分类
+const recommendations = ref([]) 
+const activeCategory = ref('校园') 
 const categories = ['校园', '恋爱', '战斗', '科幻', '奇幻', '异世界', '推理', '后宫', '热血', '百合', '搞笑', '催泪', '治愈', '致郁', '日常']
-const categorySectionRef = ref(null) // 用于滚动定位
+const categorySectionRef = ref(null)
 
-// 3. ✨ 核心功能：真·随机推荐
+// 轮播图数据
+const featuredNovels = ref([])
+
+// === 2. 核心：从后端获取真实数据 ===
+const fetchNovels = async () => {
+  try {
+    loading.value = true
+    const response = await axios.get('http://127.0.0.1:8000/a/novels/')
+    
+    // 映射后端数据到前端格式
+    allNovels.value = response.data.map(novel => ({
+      id: novel.id,
+      title: novel.title,
+      originalTitle: novel.original_title || '暂无原名',
+      author: novel.author,
+      label: novel.publisher || '未知文库', // 用出版社代替文库
+      tags: novel.tags.map(t => t.name),    // 提取标签名
+      cover: novel.cover,
+      summary: novel.description ? novel.description.substring(0, 50) + '...' : '暂无简介', // 截取简介
+      // 模拟一些图集 (因为后端目前没有 thumbnails 字段，先用封面代替)
+      thumbnails: [novel.cover, novel.cover, novel.cover, novel.cover]
+    }))
+
+    // 数据获取完后，初始化推荐和轮播
+    initPageData()
+
+  } catch (error) {
+    console.error('获取小说列表失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// === 3. 初始化页面逻辑 ===
+const initPageData = () => {
+  // 1. 随机推荐
+  shuffleRecommendations()
+  
+  // 2. 初始化轮播图 (取前3个有封面的)
+  if (allNovels.value.length > 0) {
+    featuredNovels.value = allNovels.value.slice(0, 3)
+  }
+}
+
+// 随机推荐逻辑
 const shuffleRecommendations = () => {
-  // 从大库 allNovels 中随机打乱并取前 10 本
-  const shuffled = [...allNovels].sort(() => 0.5 - Math.random())
+  if (allNovels.value.length === 0) return
+  // 随机打乱取前 10 个
+  const shuffled = [...allNovels.value].sort(() => 0.5 - Math.random())
   recommendations.value = shuffled.slice(0, 10)
 }
 
-// 4. ✨ 核心功能：分类筛选 (根据 activeCategory 动态计算)
+// 分类筛选逻辑
 const categoryBooks = computed(() => {
-  const filtered = allNovels.filter(book => book.tags.includes(activeCategory.value))
-  // 如果该分类下没有书，为了不留白，显示前5本（或者显示空状态）
-  return filtered.length > 0 ? filtered : allNovels.slice(0, 5)
+  if (allNovels.value.length === 0) return []
+  const filtered = allNovels.value.filter(book => book.tags.includes(activeCategory.value))
+  // 如果该分类没书，为了演示效果，返回全部书的前5本 (或者你可以返回空数组)
+  return filtered.length > 0 ? filtered : allNovels.value.slice(0, 5)
 })
 
-// 5. ✨ 核心功能：侧边栏标签点击联动
+// 侧边栏点击
 const handleSidebarTagClick = (tag) => {
   activeCategory.value = tag
-  // 滚动到分类区域
   if (categorySectionRef.value) {
     categorySectionRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 }
 
-// 初始化时随机一次
 onMounted(() => {
-  shuffleRecommendations()
+  fetchNovels()
 })
 
-// === 其他静态数据 (保持原样) ===
-// 轮播图数据 (取大库里的前几本并补充缩略图)
-const featuredNovels = ref([allNovels[0], allNovels[8], allNovels[2]]) 
-featuredNovels.value.forEach(novel => {
-  novel.thumbnails = [
-    'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg',
-    'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg',
-    'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
-    'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg'
-  ]
-})
-
+// === 静态假数据 (资讯、发布者、热评) 保持不变，仅展示用 ===
 const newsList = [
   { id: 1, title: '《夏日重现》外传小说发售', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', date: '3天前' },
   { id: 2, title: 'SONY宣布收购KADOKAWA', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', date: '5天前' },
@@ -90,10 +102,14 @@ const newsList = [
   { id: 4, title: '轻小说销量排行榜发布', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', date: '1周前' },
 ]
 
-const publisherSections = [
-  { name: 'MF文库J', books: allNovels.filter(b => b.label === 'MF文庫J') },
-  { name: 'GA文库', books: allNovels.filter(b => b.label === 'GA文庫' || b.label === 'GAノベル') }
-]
+// 发布者板块 (逻辑需要基于真实数据动态生成，这里先简单过滤)
+const publisherSections = computed(() => {
+    // 这里简单演示：把所有书分成两个假文库展示，实际可根据 publisher 字段分组
+    return [
+        { name: '热门文库', books: allNovels.value.slice(0, 5) },
+        { name: '新刊速递', books: allNovels.value.slice(5, 10) }
+    ]
+})
 
 const hotReviews = [
   { id: 1, title: '在点滴的拉扯日常中，确认彼此之间的心意', user: 'k1seka', bg: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', views: 538 },
@@ -110,11 +126,16 @@ const goToDetail = (id) => {
 
 <template>
   <div class="min-h-screen bg-[#f9fafb] font-sans pb-10 text-gray-800">
-    <div class="container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
+    
+    <div v-if="loading" class="flex h-screen items-center justify-center">
+        <n-spin size="large" stroke="#36ad6a" description="正在从书架取书..." />
+    </div>
+
+    <div v-else class="container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
       
       <main class="lg:col-span-3 space-y-12">
         
-        <div class="bg-white rounded-xl shadow-sm border-dashed border-gray-300 overflow-hidden">
+        <div class="bg-white rounded-xl shadow-sm border-dashed border-gray-300 overflow-hidden" v-if="featuredNovels.length > 0">
           <n-carousel autoplay show-arrow draggable class="h-auto">
             <div v-for="book in featuredNovels" :key="book.id" class="p-6 md:p-8 flex flex-col md:flex-row gap-8">
               <div class="w-full md:w-[260px] flex-shrink-0 cursor-pointer group" @click="goToDetail(book.id)">
@@ -129,18 +150,18 @@ const goToDetail = (id) => {
                   <div class="flex flex-wrap items-center gap-3 mb-4"><span class="text-sm text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{{ book.originalTitle }}</span></div>
                   <div class="text-sm text-gray-600 leading-relaxed mb-6 line-clamp-3">{{ book.summary }}</div>
                   <div class="flex gap-4">
-                    <n-button type="primary" color="#36ad6a" class="w-32 shadow-lg shadow-green-200">立即阅读</n-button>
+                    <n-button type="primary" color="#36ad6a" class="w-32 shadow-lg shadow-green-200" @click="goToDetail(book.id)">立即阅读</n-button>
                   </div>
                 </div>
                 <div class="mt-auto pt-4 border-t border-dashed border-gray-200">
-                   <div class="flex items-center gap-2 mb-3 text-xs text-gray-400 font-bold"><n-icon :component="ImageOutline" class="text-hikari-blue"/> 插画预览 / 相关推荐</div>
-                   <n-carousel :slides-per-view="4" :space-between="12" show-arrow autoplay loop class="h-24">
+                    <div class="flex items-center gap-2 mb-3 text-xs text-gray-400 font-bold"><n-icon :component="ImageOutline" class="text-hikari-blue"/> 插画预览 / 相关推荐</div>
+                    <n-carousel :slides-per-view="4" :space-between="12" show-arrow autoplay loop class="h-24">
                       <div v-for="(img, idx) in book.thumbnails" :key="idx" class="h-full cursor-pointer group">
                         <div class="h-full rounded-md overflow-hidden border border-dashed border-gray-200 relative">
                            <img :src="img" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
                         </div>
                       </div>
-                   </n-carousel>
+                    </n-carousel>
                 </div>
               </div>
             </div>
@@ -193,7 +214,7 @@ const goToDetail = (id) => {
             <span 
               v-for="cat in categories" 
               :key="cat" 
-              @click="activeCategory = cat"
+              @click="handleSidebarTagClick(cat)"
               class="cursor-pointer text-sm pb-2 transition relative"
               :class="activeCategory === cat ? 'font-bold text-hikari-blue' : 'text-gray-500 hover:text-gray-700'"
             >
@@ -203,7 +224,7 @@ const goToDetail = (id) => {
           </div>
           
           <TransitionGroup name="list" tag="div" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-             <div v-for="book in categoryBooks" :key="book.id" class="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 hover:shadow-md transition cursor-pointer group flex flex-col overflow-hidden pb-2" @click="goToDetail(book.id)">
+              <div v-for="book in categoryBooks" :key="book.id" class="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 hover:shadow-md transition cursor-pointer group flex flex-col overflow-hidden pb-2" @click="goToDetail(book.id)">
               <div class="p-3 pb-0">
                 <div class="rounded overflow-hidden shadow-inner relative aspect-[2/3]">
                   <img :src="book.cover" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">

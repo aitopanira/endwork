@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from 'vue'
+import { ref , onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NCarousel, NAvatar, NIcon, NTag, NButton } from 'naive-ui'
+import axios from 'axios'
 import { 
   GameControllerOutline, 
   CalendarOutline, 
@@ -20,16 +21,22 @@ const banners = [
 ]
 
 // 2. 新游速递 (Grid 数据)
-const newGames = ref([
-  { id: 101, title: '天使☆騒々 RE-BOOT!', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', date: '2023-04-28' },
-  { id: 102, title: 'AMBITIOUS MISSION', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', date: '2022-05-27' },
-  { id: 103, title: 'Sakura no Uta', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', date: '2015-10-24' },
-  { id: 104, title: '月影のシミュラクル', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', date: '2013-07-26' },
-  { id: 105, title: 'Rewrite', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', date: '2011-06-24' },
-  { id: 106, title: 'CLANNAD', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', date: '2004-04-28' },
-  { id: 107, title: '千恋＊万花', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', date: '2016-07-29' },
-  { id: 108, title: 'Summer Pockets', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', date: '2018-06-29' },
-])
+const newGames = ref([])
+
+const fetchGames=async()=>{
+  try {
+    const res=await axios.get('http://127.0.0.1:8000/a/getuser/galgames/')
+    console.log('获取新游数据:',res.data)
+    newGames.value=res.data
+  } catch (error) {
+    console.error('获取新游数据失败:',error)
+    message.error('获取新游数据失败')
+  }
+}
+  onMounted(() => {
+  fetchGames()
+})
+
 
 // 3. 右侧排行榜
 const rankingList = ref([
@@ -124,7 +131,7 @@ const goToBrand = (name) => {
                   {{ game.date }}
                 </div>
               </div>
-              <h3 class="font-bold text-gray-700 text-sm truncate group-hover:text-hikari-blue transition">{{ game.title }}</h3>
+              <h3 class="font-bold text-gray-700 text-sm truncate group-hover:text-hikari-blue transition">{{ game.name }}</h3>
             </div>
           </div>
         </section>

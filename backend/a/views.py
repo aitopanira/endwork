@@ -26,7 +26,7 @@ class UserViewSet(viewsets.ModelViewSet):
         password= request.data.get('password')
         # 2. 检查必填字段
         if not username or not password:
-            return Response({'status': 'error', 'msg': '用户名和密码不能为空'}, status=400)
+            return Response({'status': 'error', 'msg': '用户名或者密码不能为空'}, status=400)
         # 3. 检查用户名是否已存在
         if UserInfo.objects.filter(name=username).exists():
             return Response({'status': 'error', 'msg': '该昵称已被占用，请换一个'}, status=400)
@@ -47,7 +47,7 @@ class TagViewSet(viewsets.ModelViewSet):
 
 # === Galgame 视图 ===
 class GalgameViewSet(viewsets.ModelViewSet):
-    queryset = Galgame.objects.all()
+    queryset = Galgame.objects.all().order_by('-release_date')
     serializer_class = GalgameSerializer
 
 # === 轻小说视图 ===
@@ -62,11 +62,11 @@ class PostViewSet(viewsets.ModelViewSet):
 
 # === 评论视图 ===
 class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all()
+    queryset = Review.objects.all().order_by('-created_at')
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
-        queryset = Review.objects.all()
+        queryset = super().get_queryset()
         t_type = self.request.query_params.get('target_type')
         t_id = self.request.query_params.get('target_id')
         if t_type and t_id:

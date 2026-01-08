@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 # 引入所有视图，包括 TagViewSet
 from .views import (
     UserViewSet, GalgameViewSet, NovelViewSet, 
-    PostViewSet, ReviewViewSet, UserCollectionViewSet, TagViewSet
+    PostViewSet, ReviewViewSet, UserCollectionViewSet, TagViewSet,
 )
 
 router = DefaultRouter()

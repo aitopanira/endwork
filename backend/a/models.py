@@ -1,6 +1,5 @@
 from django.db import models
 from django.utils import timezone
-
 # 1. 用户信息表
 # 扩展了基础用户功能，增加了头像、等级、经验值等二次元社区必备字段
 class UserInfo(models.Model):
@@ -13,7 +12,7 @@ class UserInfo(models.Model):
     is_signed_today = models.BooleanField(default=False, verbose_name="今日是否签到")
 
     def __str__(self):
-        return self.name
+        return self.name 
 
 # 2. 通用标签表 (多对多关联)
 class Tag(models.Model):
@@ -39,6 +38,13 @@ class Galgame(models.Model):
 
     def __str__(self):
         return self.title
+    
+class GalgameCg(models.Model):
+    galgame = models.ForeignKey(Galgame, on_delete=models.CASCADE, related_name='cgs',verbose_name="所属Galgame")
+    image_url = models.URLField(verbose_name="CG图片链接")
+
+    def __str__(self):
+        return f"{self.galgame.title}的 CG"
 
 # 4. 轻小说 资料表
 class Novel(models.Model):
@@ -110,6 +116,8 @@ class UserCollection(models.Model):
         ('novel', 'Novel'),
         ('post', 'Post'),
     ]
+
+
     
     user = models.ForeignKey(UserInfo, on_delete=models.CASCADE)
     target_type = models.CharField(max_length=10, choices=TARGET_CHOICES)
@@ -119,3 +127,38 @@ class UserCollection(models.Model):
 
     class Meta:
         unique_together = ('user', 'target_type', 'target_id', 'status') # 联合主键，防止重复标记同一种状态
+
+
+class Character(models.Model):
+    # 1. 修改 Galgame 外键：加上 null=True, blank=True，允许为空
+    galgame = models.ForeignKey(
+        'Galgame', 
+        on_delete=models.CASCADE, 
+        related_name='characters', 
+        verbose_name="所属Galgame",
+        null=True,   # 允许数据库存空值
+        blank=True   # 允许后台表单不填
+    )
+
+    # 2. 新增 Novel 外键：关联轻小说
+    novel = models.ForeignKey(
+        'Novel', 
+        on_delete=models.CASCADE, 
+        related_name='characters', 
+        verbose_name="所属轻小说",
+        null=True, 
+        blank=True
+    )
+
+    name = models.CharField(max_length=100, verbose_name="角色名")
+    cv = models.CharField(max_length=50, blank=True, verbose_name="声优(CV)") # 小说广播剧也有CV，保留即可
+    description = models.TextField(verbose_name="角色介绍")
+    avatar = models.URLField(verbose_name="立绘图片链接")
+
+    def __str__(self):
+        # 显示时判断是属于哪边的
+        if self.galgame:
+            return f"[Gal] {self.galgame.title} - {self.name}"
+        elif self.novel:
+            return f"[Novel] {self.novel.title} - {self.name}"
+        return self.name

@@ -1,9 +1,11 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
+
 export const useUserStore = defineStore('user', () => {
   // === 1. 核心状态 (新增了 token 和 localStorage 读取逻辑) ===
   // 优先从本地存储读取，如果没有才是 null
+  
   const userInfo = ref(JSON.parse(localStorage.getItem('user')) || null)
   const token = ref(localStorage.getItem('token') || '')
 

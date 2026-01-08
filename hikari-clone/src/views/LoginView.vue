@@ -65,7 +65,7 @@ const handleRegister = async () => {
     message.warning('请填写完整的注册信息')
     return
   }
-console.log(registerForm.value);
+console
   // 2. 新增：密码一致性校验
   if (registerForm.value.password !== registerForm.value.confirmPassword) {
     message.error('两次输入的密码不一致，请检查')
