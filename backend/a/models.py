@@ -49,6 +49,7 @@ class GalgameCg(models.Model):
 # 4. 轻小说 资料表
 class Novel(models.Model):
     title = models.CharField(max_length=200, verbose_name="标题")
+    original_title = models.CharField(max_length=200, blank=True, verbose_name="原名")
     author = models.CharField(max_length=100, verbose_name="作者")
     illustrator = models.CharField(max_length=100, blank=True, verbose_name="插画")
     publisher = models.CharField(max_length=100, blank=True, verbose_name="出版社")
@@ -62,7 +63,19 @@ class Novel(models.Model):
 
     def __str__(self):
         return self.title
+class NovelVolume(models.Model):
+    novel = models.ForeignKey(
+        Novel, 
+        on_delete=models.CASCADE, 
+        related_name='volumes', # 反向查询名称，很重要！
+        verbose_name="所属小说"
+    )
+    title = models.CharField(max_length=200, verbose_name="卷名") # 如 "第一卷 败犬女主太多了"
+    cover = models.URLField(max_length=500, blank=True, null=True, verbose_name="本卷封面")
+    release_date = models.DateField(blank=True, null=True, verbose_name="发售日")
 
+    def __str__(self):
+        return f"{self.novel.title} - {self.title}"
 # 5. 社区帖子表
 class Post(models.Model):
     author = models.ForeignKey(UserInfo, on_delete=models.CASCADE, verbose_name="作者")

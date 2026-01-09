@@ -30,7 +30,6 @@ const fetchNovels = async () => {
   try {
     loading.value = true
     const response = await axios.get('http://127.0.0.1:8000/a/novels/')
-    
     // 映射后端数据到前端格式
     allNovels.value = response.data.map(novel => ({
       id: novel.id,
@@ -41,9 +40,11 @@ const fetchNovels = async () => {
       tags: novel.tags.map(t => t.name),    // 提取标签名
       cover: novel.cover,
       summary: novel.description ? novel.description.substring(0, 50) + '...' : '暂无简介', // 截取简介
-      // 模拟一些图集 (因为后端目前没有 thumbnails 字段，先用封面代替)
-      thumbnails: [novel.cover, novel.cover, novel.cover, novel.cover]
+      thumbnails: novel.volumes.map(v => v.cover)
     }))
+      // 模拟一些图集 (因为后端目前没有 thumbnails 字段，先用封面代替)
+      
+
 
     // 数据获取完后，初始化推荐和轮播
     initPageData()
@@ -153,12 +154,12 @@ const goToDetail = (id) => {
                     <n-button type="primary" color="#36ad6a" class="w-32 shadow-lg shadow-green-200" @click="goToDetail(book.id)">立即阅读</n-button>
                   </div>
                 </div>
-                <div class="mt-auto pt-4 border-t border-dashed border-gray-200">
+                <div class="mt-auto pt-4 border-t border-dashed border-gray-200 ">
                     <div class="flex items-center gap-2 mb-3 text-xs text-gray-400 font-bold"><n-icon :component="ImageOutline" class="text-hikari-blue"/> 插画预览 / 相关推荐</div>
-                    <n-carousel :slides-per-view="4" :space-between="12" show-arrow autoplay loop class="h-24">
-                      <div v-for="(img, idx) in book.thumbnails" :key="idx" class="h-full cursor-pointer group">
+                    <n-carousel :slides-per-view="3" :space-between="12" show-arrow autoplay loop class="h-48">
+                      <div v-for="(img, idx) in book.thumbnails" :key="idx" class="h-full cursor-pointer group ">
                         <div class="h-full rounded-md overflow-hidden border border-dashed border-gray-200 relative">
-                           <img :src="img" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                           <img :src="img" class="w-full h-full object-top  object-cover group-hover:scale-110 transition duration-500">
                         </div>
                       </div>
                     </n-carousel>
@@ -294,8 +295,8 @@ const goToDetail = (id) => {
                <n-avatar round :size="64" :src="userStore.userInfo.avatar" class="mb-3 border border-gray-200" />
                <h3 class="font-bold text-gray-800">{{ userStore.userInfo.name }}</h3>
                <div class="mt-6 space-y-3">
-                 <div class="flex justify-between items-center text-sm p-2 hover:bg-gray-50 rounded cursor-pointer transition">
-                   <span class="text-gray-500">我的收藏</span><n-icon :component="ChevronForward" class="text-gray-300"/>
+                 <div class="flex justify-between items-center text-sm p-2 hover:bg-gray-50 rounded cursor-pointer transition" @click="router.push('/library')">
+                   <span class="text-gray-500" >我的收藏</span><n-icon :component="ChevronForward" class="text-gray-300"/>
                  </div>
                </div>
             </div>

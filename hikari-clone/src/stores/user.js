@@ -1,16 +1,47 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-
+import axios from 'axios' // 1. 引入 axios
 
 export const useUserStore = defineStore('user', () => {
-  // === 1. 核心状态 (新增了 token 和 localStorage 读取逻辑) ===
-  // 优先从本地存储读取，如果没有才是 null
   
-  const userInfo = ref(JSON.parse(localStorage.getItem('user')) || null)
+  // === 1. 初始化逻辑 (新增：防呆处理) ===
+  // 专门处理“刷新页面”时的数据读取，防止旧数据缺少字段导致报错
+  const loadUserFromStorage = () => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('user'))
+      if (!stored) return null
+
+      // 补全可能缺失的字段 (兼容旧数据)
+      // 1. 补全等级
+      if (stored.level === undefined) stored.level = 1
+      
+      // 2. 补全下一级经验 (如果缺失，按公式反推)
+      if (!stored.nextLevelExp) {
+        stored.nextLevelExp = Math.floor(100 * Math.pow(1.2, stored.level - 1))
+      }
+      
+      // 3. 兼容 exp 和 currentExp
+      if (stored.currentExp === undefined) {
+        stored.currentExp = stored.exp || 0
+      }
+
+      // 4. 兼容下划线写法
+      if (stored.isSignedToday === undefined) {
+        stored.isSignedToday = stored.is_signed_today || false
+      }
+
+      return stored
+    } catch (e) {
+      localStorage.removeItem('user')
+      return null
+    }
+  }
+
+  // === 2. 核心状态 ===
+  const userInfo = ref(loadUserFromStorage()) // 使用增强版的读取函数
   const token = ref(localStorage.getItem('token') || '')
 
-  // === 2. 用户资源库数据 (保持你原来的代码不变) ===
-  // 注意：如果想让这些数据也“刷新不丢失”，建议也存 localStorage 或等后端有了对应接口后从后端获取
+  // === 3. 用户资源库数据 ===
   const galgameLibrary = ref({
     wish: [],    
     playing: [], 
@@ -24,49 +55,108 @@ export const useUserStore = defineStore('user', () => {
 
   const articleLibrary = ref([])
 
-  // === 3. 动作：登录 (核心修改) ===
-  // data: 后端返回的完整数据对象
+  // === 4. 动作：登录 ===
   const login = (data) => {
-    // 假设后端返回的数据结构包含 user 信息和 token
-    // 例如： { user: { id: 1, name: '...' }, token: 'xyz...' }
-    // 如果后端直接返回用户信息且 Token 在 header 里，这里需要根据实际情况调整
+    // 兼容逻辑：后端可能返回 { status: 'success', user: {...}, token: '...' }
+    // 也可能直接返回 user 对象
+    const rawUser = data.user || data
     
-    // 1. 设置状态
-    userInfo.value = data.user || data // 兼容一下，看后端是包裹在 user 里还是直接返回
-    token.value = data.token || 'mock-token' // 如果后端暂时没发 token，先给个假的防止报错
+    // ⚠️ 关键修正：后端字段 -> 前端字段映射
+    const mappedUser = {
+      ...rawUser,
+      // 如果后端有 exp 字段，映射为 currentExp；否则默认为 0
+      currentExp: rawUser.exp !== undefined ? rawUser.exp : (rawUser.currentExp || 0),
+      // 如果后端有 is_signed_today，映射为 isSignedToday
+      isSignedToday: rawUser.is_signed_today !== undefined ? rawUser.is_signed_today : false,
+      // 初始化下一级所需经验 (如果没存过，默认 100，按 1.2 倍递增)
+      nextLevelExp: rawUser.nextLevelExp || Math.floor(100 * Math.pow(1.2, (rawUser.level || 1) - 1))
+    }
 
-    // 2. 持久化存储 (关键！刷新不丢失)
+    userInfo.value = mappedUser
+    token.value = data.token || 'mock-token-xyz' // 防止后端没发 token 导致报错
+
+    // 持久化存储
     localStorage.setItem('user', JSON.stringify(userInfo.value))
     localStorage.setItem('token', token.value)
   }
 
-  // === 4. 动作：退出登录 (核心修改) ===
+  // === 5. 动作：退出登录 ===
   const logout = () => {
     userInfo.value = null
     token.value = ''
     
-    // 清除本地存储
     localStorage.removeItem('user')
     localStorage.removeItem('token')
-    
-    // 可选：退出时是否要清空资源库？看你需求
-    // galgameLibrary.value = { wish: [], playing: [], played: [] }
+    localStorage.removeItem('lastSignDate')
   }
 
-  // === 5. 辅助函数：判断是否登录 ===
+  // === 6. 辅助函数 ===
   const isLoggedIn = () => {
-    return !!token.value // 有 token 就算登录
+    return !!token.value
   }
 
-  // === 下面是你原来的业务逻辑 (完美保留) ===
+  // === 7. 动作：签到 (核心修改：连接后端) ===
+  const signIn = async () => {
+    // 1. 检查是否登录
+    if (!userInfo.value) return { success: false, msg: '请先登录' }
+    
+    // 前端先做个简单判断，避免重复请求（后端也会再校验一次）
+    if (userInfo.value.isSignedToday) {
+      return { success: false, msg: '今天已经签到过了哦~' }
+    }
 
-  // === 动作：管理 Galgame 状态 ===
+    try {
+      // 2. 发送请求给后端 (请确保端口号正确)
+      const res = await axios.post('http://127.0.0.1:8000/a/users/sign_in/', {
+        user_id: userInfo.value.id
+      })
+
+      const data = res.data
+      
+      if (data.status === 'success') {
+        // 3. 后端处理成功，直接用后端返回的最新 user 数据覆盖前端的
+        const rawUser = data.user
+        
+        // 重新做一次字段映射 (保持和 login 里一样的逻辑)
+        // 这样前端显示的等级、经验就自动同步了
+        userInfo.value = {
+            ...rawUser,
+            currentExp: rawUser.exp, // 后端通常返回 exp
+            isSignedToday: true,     // 既然成功了，那就是签了
+            level: rawUser.level,
+            // 算出下一级经验用于显示进度条
+            nextLevelExp: Math.floor(100 * Math.pow(1.2, (rawUser.level - 1)))
+        }
+        
+        // 更新本地存储
+        localStorage.setItem('user', JSON.stringify(userInfo.value))
+        
+        return { success: true, msg: data.msg }
+      } else {
+        // 后端返回 warning (比如“已签到”)
+        return { success: false, msg: data.msg }
+      }
+
+    } catch (error) {
+      console.error('签到请求失败:', error)
+      return { success: false, msg: '签到失败，网络连接错误' }
+    }
+  }
+
+  // === 8. 动作：更新个人资料 ===
+  const updateProfile = (data) => {
+    if (userInfo.value) {
+      userInfo.value = { ...userInfo.value, ...data }
+      localStorage.setItem('user', JSON.stringify(userInfo.value))
+    }
+  }
+
+  // === 9. 资源库管理逻辑 (保持原样) ===
   const setGalgameStatus = (game, status) => {
     ['wish', 'playing', 'played'].forEach(key => {
       const index = galgameLibrary.value[key].findIndex(g => g.id === game.id)
       if (index !== -1) galgameLibrary.value[key].splice(index, 1)
     })
-
     if (status) {
       galgameLibrary.value[status].unshift({
         id: game.id,
@@ -79,7 +169,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // === 动作：收藏/取消收藏 轻小说 ===
   const toggleNovelFavorite = (novel) => {
     const index = novelLibrary.value.favorites.findIndex(n => n.id === novel.id)
     if (index !== -1) {
@@ -96,7 +185,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // === 动作：标记/取消标记 轻小说已读 ===
   const toggleNovelRead = (novel) => {
     const index = novelLibrary.value.read.findIndex(n => n.id === novel.id)
     if (index !== -1) {
@@ -113,7 +201,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // === 动作：收藏文章 ===
   const toggleArticleFavorite = (article) => {
     const index = articleLibrary.value.findIndex(a => a.id === article.id)
     if (index !== -1) {
@@ -124,58 +211,32 @@ export const useUserStore = defineStore('user', () => {
         id: article.id,
         title: article.title,
         author: article.author,
-        summary: article.summary || article.content.substring(0, 50) + '...',
+        summary: article.summary || (article.content ? article.content.substring(0, 50) + '...' : ''),
         time: article.date || '刚刚'
       })
       return true
     }
   }
 
-  // === 动作：注册 (配合后端逻辑简单修改) ===
   const register = (nickname, email) => {
-     // 注册其实通常不需要在 store 里操作 state，
-     // 而是注册成功后自动调用 login，或者跳回登录页。
-     // 这里保留你的逻辑，但建议注册成功后直接走 login 流程。
-    console.log('注册信息已提交', nickname, email)
-  }
-
-  // === 动作：更新个人资料 ===
-  const updateProfile = (data) => {
-    if (userInfo.value) {
-      userInfo.value = { ...userInfo.value, ...data }
-      // 更新了资料也要同步到 localStorage
-      localStorage.setItem('user', JSON.stringify(userInfo.value))
-    }
-  }
-
-  // === 动作：签到 (保留你的逻辑，记得同步 storage) ===
-  const signIn = () => {
-    if (!userInfo.value || userInfo.value.isSignedToday) return { success: false, msg: '今日已签到' }
-
-    const expGain = Math.floor(Math.random() * 41) + 10
-    userInfo.value.currentExp += expGain
-    userInfo.value.isSignedToday = true
-
-    let msg = `签到成功！经验 +${expGain}`
-
-    if (userInfo.value.currentExp >= userInfo.value.nextLevelExp) {
-      userInfo.value.currentExp -= userInfo.value.nextLevelExp
-      userInfo.value.level += 1
-      userInfo.value.nextLevelExp = Math.floor(userInfo.value.nextLevelExp * 1.2)
-      msg += `，恭喜升级到 Lv.${userInfo.value.level}！`
-    }
-    
-    // 状态变了，同步保存到本地
-    localStorage.setItem('user', JSON.stringify(userInfo.value))
-
-    return { success: true, msg }
+    console.log('注册信息 (前端仅记录):', nickname, email)
   }
 
   return { 
-    userInfo, token, isLoggedIn, // 导出新加的状态和方法
-    login, logout, register, updateProfile, signIn,
-    galgameLibrary, setGalgameStatus,
-    novelLibrary, toggleNovelFavorite, toggleNovelRead,
-    articleLibrary, toggleArticleFavorite 
+    userInfo, 
+    token, 
+    isLoggedIn, 
+    login, 
+    logout, 
+    register, 
+    updateProfile, 
+    signIn, // 导出新的 signIn
+    galgameLibrary, 
+    setGalgameStatus,
+    novelLibrary, 
+    toggleNovelFavorite, 
+    toggleNovelRead,
+    articleLibrary, 
+    toggleArticleFavorite 
   }
 })

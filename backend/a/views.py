@@ -8,12 +8,50 @@ from .serializers import (
     UserInfoSerializer, GalgameSerializer, NovelSerializer, 
     PostSerializer, ReviewSerializer, UserCollectionSerializer, TagSerializer
 )
+import random
 
 # === 用户视图 ===
 class UserViewSet(viewsets.ModelViewSet):
     queryset = UserInfo.objects.all()
     serializer_class = UserInfoSerializer
+   # === 👇 新增这个签到接口 👇 ===
+    @action(detail=False, methods=['post'])
+    def sign_in(self, request):
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'status': 'error', 'msg': '用户ID不能为空'}, status=400)
+        
+        try:
+            user = UserInfo.objects.get(id=user_id)
+        except UserInfo.DoesNotExist:
+            return Response({'status': 'error', 'msg': '用户不存在'}, status=404)
 
+        if user.is_signed_today:
+             return Response({'status': 'warning', 'msg': '今天已经签到过了哦~'})
+
+        # 增加经验
+        exp_gain = random.randint(10, 50)
+        user.exp += exp_gain
+        user.is_signed_today = True
+        
+        msg = f"签到成功！经验 +{exp_gain}"
+
+        # 升级逻辑
+        next_level_exp = int(100 * (1.2 ** (user.level - 1)))
+        while user.exp >= next_level_exp:
+            user.exp -= next_level_exp
+            user.level += 1
+            msg += f"，恭喜升级到 Lv.{user.level}！"
+            next_level_exp = int(100 * (1.2 ** (user.level - 1)))
+
+        user.save() # 保存到数据库
+
+        serializer = self.get_serializer(user)
+        return Response({
+            'status': 'success', 
+            'msg': msg, 
+            'user': serializer.data
+        })
     @action(detail=False, methods=['post'])
     def login(self, request):
         username = request.data.get('username')
@@ -84,3 +122,4 @@ class UserCollectionViewSet(viewsets.ModelViewSet):
         if user_id:
             queryset = queryset.filter(user_id=user_id)
         return queryset
+

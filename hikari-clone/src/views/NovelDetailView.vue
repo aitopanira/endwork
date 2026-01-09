@@ -8,7 +8,7 @@ import {
 import { 
   BookOutline, HeartOutline, Heart, ArrowBackOutline, ShareSocialOutline, 
   EyeOutline, PersonOutline, CreateOutline, ChatbubbleOutline, Star,
-  CheckmarkCircleOutline, CheckmarkCircle
+  CheckmarkCircleOutline, CheckmarkCircle, ListOutline // 引入列表图标
 } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
 import axios from 'axios'
@@ -29,7 +29,10 @@ const fetchNovelData = async () => {
     loading.value = true
     const response = await axios.get(`http://127.0.0.1:8000/a/novels/${novelId}/`)
     const data = response.data
+    const novelVolumes = [{}]
+    // 模拟卷数据 (因为后端暂时没有 Volume 表)
     
+
     novel.value = {
       id: data.id,
       title: data.title,
@@ -41,15 +44,21 @@ const fetchNovelData = async () => {
       publisher: data.publisher || '未知文库',
       status: data.status,
       tags: data.tags.map(tag => tag.name),
-      // 角色数据
       characters: data.characters ? data.characters.map(c => ({
         id: c.id,
         name: c.name,
-        // 小说角色可能没有 CV 或 role 字段，这里做兼容处理
         role: c.role || '主要角色', 
         avatar: c.avatar
-      })) : []
+        
+      })) : [],
+      // 注入模拟的卷信息
+      volumes: data.volumes.map(v => ({
+        id: v.id,
+        title: v.title,
+        cover: v.cover  // 暂时都用小说封面
+      }))
     }
+      console.log(novel.value.characters)
   } catch (error) {
     console.error('获取小说失败:', error)
     message.error('数据加载失败')
@@ -57,6 +66,7 @@ const fetchNovelData = async () => {
     loading.value = false
   }
 }
+
 
 // === 2. API: 获取评论 ===
 const reviews = ref([])
@@ -79,32 +89,34 @@ onMounted(() => {
   fetchReviews()
 })
 
-// === 状态逻辑 (修复版) ===
+// === 状态逻辑 ===
 const isFavorited = computed(() => {
-  // 1. 基础检查
   if (!novel.value || !userStore.userInfo) return false
-  
-  // 2. 安全检查：先看 galgameLibrary 存不存在，再看 wish 存不存在
-  const library = userStore.galgameLibrary // 或者 userStore.novelLibrary
-  return library?.wish?.some(n => n.id === novelId) ?? false
+  return userStore.novelLibrary?.favorites?.some(n => n.id === novelId) ?? false
 })
 
 const isRead = computed(() => {
   if (!novel.value || !userStore.userInfo) return false
-  
-  const library = userStore.galgameLibrary // 或者 userStore.novelLibrary
-  return library?.read?.some(n => n.id === novelId) ?? false
+  return userStore.novelLibrary?.read?.some(n => n.id === novelId) ?? false
+})
+
+const averageScore = computed(() => {
+  if (reviews.value.length === 0) return 0
+  const total = reviews.value.reduce((sum, item) => sum + item.score, 0)
+  return (total / reviews.value.length).toFixed(1)
 })
 
 // === 交互逻辑 ===
 const handleFavorite = () => {
   if (!userStore.userInfo) { message.warning('请先登录'); router.push('/login'); return }
-  message.success('收藏功能开发中')
+  const success = userStore.toggleNovelFavorite(novel.value)
+  message.success(success ? '已加入书架' : '已取消收藏')
 }
 
 const handleMarkAsRead = () => {
   if (!userStore.userInfo) { message.warning('请先登录'); router.push('/login'); return }
-  message.success('标记功能开发中')
+  const success = userStore.toggleNovelRead(novel.value)
+  message.success(success ? '标记为已读' : '取消已读状态')
 }
 
 const scrollToComments = () => {
@@ -116,6 +128,12 @@ const scrollToComments = () => {
 }
 
 const handleShare = () => message.success('链接已复制')
+
+// === 阅读卷 ===
+const handleReadVolume = (volId) => {
+  message.info(`准备开始阅读第 ${volId} 卷`)
+  // router.push(...) 
+}
 
 // === 评论提交 ===
 const commentContent = ref('')
@@ -233,38 +251,42 @@ const submitReview = async () => {
                    </div>
                 </n-tab-pane>
 
-           <n-tab-pane name="chars" tab="登场人物">
-                   <div class="p-6 min-h-[300px]">
-                      
-                      <div v-if="novel.characters.length === 0" class="text-center text-gray-400 py-10">
-                          暂无角色信息
-                      </div>
-
-                      <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                         
+                <n-tab-pane name="volumes" tab="发行列表">
+                   <div class="p-4 min-h-[200px]">
+                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                          <div 
-                           v-for="char in novel.characters" 
-                           :key="char.id" 
-                           class="flex flex-col items-center group cursor-pointer"
+                           v-for="vol in novel.volumes" 
+                           :key="vol.id" 
+                           @click="handleReadVolume(vol.id)"
+                           class="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg cursor-pointer group transition border border-transparent hover:border-gray-100"
                          >
+                           <div class="w-12 h-16 rounded overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm">
+                             <img :src="vol.cover" class="w-full h-full object-cover">
+                           </div>
+                           <div>
+                             <h4 class="font-bold text-sm text-gray-700 group-hover:text-blue-500 transition mb-1">{{ vol.title }}</h4>
+                             <span class="text-xs text-gray-400 flex items-center gap-1">
+                               <n-icon :component="BookOutline" /> {{ vol.date }}
+                             </span>
+                           </div>
+                         </div>
+                      </div>
+                   </div>
+                </n-tab-pane>
+
+                <n-tab-pane name="chars" tab="登场人物">
+                   <div class="p-4 min-h-[200px]">
+                      <div v-if="novel.characters.length === 0" class="text-center text-gray-400 py-10">暂无角色信息</div>
+                      <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                         <div v-for="char in novel.characters" :key="char.id" class="flex flex-col items-center group cursor-pointer">
                             <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-sm group-hover:shadow-md group-hover:scale-105 transition duration-300 relative bg-gray-100">
-                               <img 
-                                 :src="char.avatar" 
-                                 class="w-full h-full object-cover" 
-                                 alt="头像"
-                               >
+                               <img :src="char.avatar" class="w-full h-full object-cover object-top" alt="头像">
                             </div>
-                            
                             <div class="text-center mt-3">
-                               <h3 class="font-bold text-gray-700 text-sm group-hover:text-blue-500 transition">
-                                 {{ char.name }}
-                               </h3>
-                               <span v-if="char.role" class="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full mt-1 inline-block">
-                                 {{ char.role }}
-                               </span>
+                               <h4 class="font-bold text-gray-700 text-sm group-hover:text-blue-500 transition">{{ char.name }}</h4>
+                               <span v-if="char.role" class="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full mt-1 inline-block">{{ char.role }}</span>
                             </div>
                          </div>
-
                       </div>
                    </div>
                 </n-tab-pane>

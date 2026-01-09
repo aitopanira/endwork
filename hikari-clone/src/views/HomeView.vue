@@ -1,17 +1,19 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NCarousel, NAvatar, NIcon, useMessage } from 'naive-ui' 
 import { EyeOutline, HeartOutline, GameControllerOutline, BookOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user' 
 import PostCard from '../components/PostCard.vue'
+import axios from 'axios'
 
 const userStore = useUserStore()
 const router = useRouter()
-const message = useMessage() // 引入 message
+const message = useMessage()
 
-// 1. 状态控制：当前激活的 Tab ('galgame' 或 'novel')
+// 1. 状态控制
 const activeReviewTab = ref('galgame')
+const loading = ref(false)
 
 // 通用跳转函数
 const goToDetail = (id, type = 'post') => {
@@ -20,32 +22,32 @@ const goToDetail = (id, type = 'post') => {
   } else if (type === 'book' || type === 'novel') {
     router.push(`/novel/${id}`)
   } else {
-    // 默认为文章帖子
     router.push(`/post/${id}`)
   }
 }
 
-// === 新增：处理签到 ===
-const handleSignIn = () => {
+// 计算经验条百分比
+const expPercentage = computed(() => {
+  if (!userStore.userInfo) return '0%'
+  const current = userStore.userInfo.currentExp || 0
+  const total = userStore.userInfo.nextLevelExp || 100 
+  const pct = (current / total) * 100
+  return Math.min(pct, 100).toFixed(1) + '%'
+})
+
+// 处理签到
+const handleSignIn = async () => {
   if (!userStore.userInfo) {
     router.push('/login')
     return
   }
-  // 调用 store 中的签到方法
-  const result = userStore.signIn()
+  const result = await userStore.signIn()
   if (result.success) {
     message.success(result.msg)
   } else {
     message.warning(result.msg)
   }
 }
-
-// === 新增：计算经验条百分比 ===
-const expPercentage = computed(() => {
-  if (!userStore.userInfo) return '0%'
-  const pct = (userStore.userInfo.currentExp / userStore.userInfo.nextLevelExp) * 100
-  return Math.min(pct, 100).toFixed(1) + '%'
-})
 
 // 轮播图数据
 const banners = [
@@ -54,139 +56,105 @@ const banners = [
 ]
 
 // 最新资讯数据
-const newsPosts = ref([
-  {
-    id: 1,
-    title: '【Gal周报223期】MOONSTONE 宣布将制作新作，《anemoi》宣布跳票',
-    summary: '本周，MOONSTONE 宣布将制作两部新作，并同步公开了两部作品的主视觉图和宣传 PV...',
-    author: 'いち',
-    date: '大约 22 小时前',
-    views: 3200,
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg'
-  },
-  {
-    id: 2,
-    title: 'Key 社新作《anemoi》发布延迟通知',
-    summary: '旧：2026年1月30日（周五） 新：2026年4月24日（周五） ▼anemoi 官方网站▼...',
-    author: 'いち',
-    date: '4 天前',
-    views: 5400,
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg'
-  },
-  {
-    id: 3,
-    title: '【Gal周报222期】十二月新作本周发售，《缘起甜韵趣味丛生！》官中登陆 Steam',
-    summary: '十二月新作已于本周发售，一共有五部作品，其中 PC 平台有四部作品...',
-    author: 'いち',
-    date: '8 天前',
-    views: 2100,
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg'
-  },
-  {
-    id: 4,
-    title: '【Gal周报221期】《航迹云的彼方》民汉发布，《恋爱0公里》发售日期更新',
-    summary: '本周，Eushully宣布将制作“战姬”系列第二部作品...',
-    author: 'いち',
-    date: '15 天前',
-    views: 1800,
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg'
-  }
-])
+const newsPosts = ref([])
 
-// === 数据源 A：Galgame 评分 ===
-const galgameReviews = ref([
-  {
-    id: 101,
-    title: 'CLANNAD',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
-    score: '10.0',
-    comment: 'Clannad是我人生中最重要的作品之一，它在一定程度上告诉我们要珍惜...',
-    user: '唐胡v天体',
-    time: '10天前',
-    status: '已完成'
-  },
-  {
-    id: 102,
-    title: 'AMBITIOUS MISSION',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg',
-    score: '9.0',
-    comment: '只玩了忍者那条线，有点想睡着，反正太色了太色了...',
-    user: '蓝胖子',
-    time: '21天前',
-    status: '已完成'
-  },
-  {
-    id: 103,
-    title: '月影のシミュラクル',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg',
-    score: '10.0',
-    comment: '流程中规中矩，喜欢恐怖悬疑解密的可以无脑玩...',
-    user: 'StatTrak',
-    time: '24天前',
-    status: '已完成'
-  },
-  {
-    id: 104,
-    title: 'Rewrite',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg',
-    score: '9.0',
-    comment: '如果说在玩完5条个人线的时候对久仰本作大名的我来说...',
-    user: 'darkhope',
-    time: '26天前',
-    status: '已完成'
-  }
-])
+// === 数据源 A：Galgame 评分 (已按分数排序) ===
+const galgameReviews = ref([])
 
-// === 数据源 B：轻小说评分 (新增) ===
-const lightNovelReviews = ref([
-  {
-    id: 201,
-    title: '物语系列',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg',
-    score: '10.0',
-    comment: '我心目中的第一神作，西尾维新真把文字玩到了极致，物语从始至终都在讲...',
-    user: 'AOTO AOZAKI',
-    time: '15天前',
-    status: '已读完'
-  },
-  {
-    id: 202,
-    title: '刀剑神域',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg',
-    score: '10.0',
-    comment: '我最喜欢的作品，看完动画就喜欢上了然后去补了小说，小说更是精彩...',
-    user: 'bobllllll',
-    time: '20天前',
-    status: '已读完'
-  },
-  {
-    id: 203,
-    title: '通往夏天的隧道，再见的出口',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg',
-    score: '8.0',
-    comment: '“我们相吻的五秒，是外界相当于六个小时的吻。” 一篇优秀的处女作...',
-    user: 'klseka',
-    time: '大约2个月前',
-    status: '已读完'
-  },
-  {
-    id: 204,
-    title: '在昨日的春天等待你',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
-    score: '10.0',
-    comment: '环环相扣以及倒放一般的剧情，我如果不看这本小说，死前走马灯绝对后悔...',
-    user: '空门苍',
-    time: '3个月前',
-    status: '已读完'
+const fetchGalgameReviews = async () => {
+  loading.value = true
+  try {
+    const response = await axios.get('http://127.0.0.1:8000/a/getuser/galgames/')
+    if (response.data && Array.isArray(response.data)) {
+        // 👇 核心修改：先按 score_avg 降序排序，再取前 8 个
+        galgameReviews.value = response.data
+          .sort((a, b) => (b.score_avg || 0) - (a.score_avg || 0)) // 降序排列
+          .slice(0, 8) // 取前8个
+          .map(game => ({
+            id: game.id,
+            title: game.title,
+            cover: game.cover,
+            score: game.score_avg || game.score || 0.0, 
+            comment: game.comment,
+            user: game.user,
+            time: game.time,
+            status: game.status
+          }))
+    }
+  } catch (error) {
+    console.error('获取Galgame评分失败:', error)
   }
-])
+  finally {
+    loading.value = false
+  }
+}
 
-// 计算属性：根据当前 Tab 返回对应的数据
+// === 数据源 B：轻小说评分 (已按分数排序) ===
+const lightNovelReviews = ref([])
+
+const fetchLightNovelReviews = async () => {
+  try {
+    loading.value = true
+    const response = await axios.get('http://127.0.0.1:8000/a/getuser/novels/')
+    
+    if (response.data && Array.isArray(response.data)) {
+      // 👇 核心修改：同样先排序再截取
+      lightNovelReviews.value = response.data
+        .sort((a, b) => (b.score_avg || 0) - (a.score_avg || 0)) // 降序排列
+        .slice(0, 8) // 取前8个
+        .map(novel => ({
+          id: novel.id,
+          title: novel.title,
+          cover: novel.cover,
+          score: novel.score_avg || novel.score || 0.0, 
+          user: novel.author || '未知作者', 
+          status: novel.publisher || '连载中',
+          time: novel.release_date || '近期'
+        }))
+    }
+  } catch (error) {
+    console.error('获取小说列表失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 计算属性：根据 Tab 切换
 const currentReviews = computed(() => {
   return activeReviewTab.value === 'galgame' ? galgameReviews.value : lightNovelReviews.value
 })
 
-// 热门点评数据
+// === 侧边栏：本月强推 ===
+const featuredGame = ref(null)
+
+const fetchFeaturedGame = async () => {
+  try {
+    const response = await axios.get('http://127.0.0.1:8000/a/getuser/galgames/')
+    if (response.data && response.data.length > 0) {
+      // 找出评分最高的那个
+      const bestGame = response.data.reduce((prev, current) => {
+        const prevScore = prev.score_avg || 0
+        const currScore = current.score_avg || 0
+        return (prevScore > currScore) ? prev : current
+      })
+
+      featuredGame.value = {
+        id: bestGame.id,
+        title: bestGame.title,
+        brand: bestGame.developer || '未知厂商',
+        date: bestGame.release_date || '未知日期',
+        score: bestGame.score_avg || 0.0,
+        description: bestGame.description || '暂无简介，点击查看详情...', 
+        cover: bestGame.cover,
+        tags: bestGame.tags ? bestGame.tags.map(t => t.name || t) : ['强推', '高分']
+      }
+    }
+  } catch (error) {
+    console.error('获取本月强推失败:', error)
+  }
+}
+
+// 侧边栏：热门点评
 const popularReviews = ref([
   {
     id: 1,
@@ -223,58 +191,10 @@ const popularReviews = ref([
     views: 669,
     likes: 3,
     time: '大约2个月前'
-  },
-  {
-    id: 4,
-    title: '《缘之空》: 盛夏尽头的温柔恋恋',
-    source: '缘之空',
-    type: 'game',
-    summary: '虽说《缘之空》的大名在ACG圈子内已经如雷贯耳...',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
-    author: 'OfficialBot',
-    views: 1205,
-    likes: 88,
-    time: '2个月前'
-  },
-  {
-    id: 5,
-    title: '道别过去，拥抱未来',
-    source: '通往夏天的隧道，再见的出口',
-    type: 'book',
-    summary: '作为八目迷老师的处女作我认为是相当合格的...',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg',
-    author: 'BookWorm',
-    views: 890,
-    likes: 12,
-    time: '3个月前'
-  },
-  {
-    id: 6,
-    title: 'Lovesick Puppies简评 —— 遗珠之恨',
-    source: 'LOVESICK PUPPIES',
-    type: 'game',
-    summary: '裸推并单说十几世纪后无汉化，意思是那些伟大作品被埋没的可惜...',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg',
-    author: 'GalGamer',
-    views: 450,
-    likes: 9,
-    time: '3个月前'
   }
 ])
 
-// 侧边栏本月强推数据
-const featuredGame = ref({
-  id: 101,
-  title: 'Sakura no Uta - 樱之诗',
-  brand: '枕 (Makura)',
-  date: '2015-10-24',
-  score: 9.8,
-  description: '春天，樱花飞舞的季节。与你相遇的奇迹，是名为“樱之诗”的旋律...',
-  cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', 
-  tags: ['剧情作', '神作', '哲学']
-})
-
-// 社区动态数据
+// 社区动态
 const posts = ref([
   {
     id: 10,
@@ -310,6 +230,13 @@ const posts = ref([
     cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg'
   }
 ])
+
+// === 生命周期 ===
+onMounted(() => {
+  fetchGalgameReviews()
+  fetchLightNovelReviews()
+  fetchFeaturedGame()
+})
 </script>
 
 <template>
@@ -324,7 +251,8 @@ const posts = ref([
       <section>
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-bold text-gray-700 flex items-center gap-2">
-            <span class="text-hikari-blue text-2xl">❖</span> 最新评分
+            <span class="text-hikari-blue text-2xl">❖</span> 
+            {{ activeReviewTab === 'galgame' ? '高分 Galgame' : '高分轻小说' }}
           </h2>
           
           <div class="flex gap-2">
@@ -346,43 +274,48 @@ const posts = ref([
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           <div 
-            v-for="game in currentReviews" 
-            :key="game.id" 
-            @click="goToDetail(game.id,activeReviewTab === 'galgame' ? 'game' : 'book')"
-            class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition flex gap-3 group cursor-pointer animate-fade-in"
+            v-for="item in currentReviews" 
+            :key="item.id" 
+            @click="goToDetail(item.id, activeReviewTab === 'galgame' ? 'game' : 'book')"
+            class="group cursor-pointer flex flex-col gap-2 animate-fade-in"
           >
-            <div class="w-20 h-28 flex-shrink-0 relative overflow-hidden rounded-md bg-gray-100">
-              <img :src="game.cover" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+            <div class="relative w-full aspect-[3/4] rounded-lg overflow-hidden border border-gray-100 shadow-sm bg-gray-100">
+              <img :src="item.cover" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+              
+              <div v-if="item.score > 0" class="absolute top-0 right-0 bg-yellow-400 text-white text-xs font-bold px-2 py-1 rounded-bl-lg shadow-md backdrop-blur-sm bg-opacity-95">
+                {{ item.score }}
+              </div>
+
+              <div v-if="item.status" class="absolute bottom-2 left-2 text-[10px] text-white bg-black/50 px-1.5 py-0.5 rounded backdrop-blur-sm truncate max-w-[80%]">
+                 {{ item.status }}
+              </div>
             </div>
-            <div class="flex-grow min-w-0 flex flex-col justify-between">
-              <div class="flex justify-between items-start gap-2">
-                <h3 class="font-bold text-gray-800 text-sm truncate w-full group-hover:text-hikari-blue transition">
-                  {{ game.title }}
-                </h3>
-                <span class="bg-yellow-400 text-white text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0 shadow-sm">
-                  {{ game.score }}
-                </span>
-              </div>
-              <p class="text-xs text-gray-500 line-clamp-2 mt-1 leading-relaxed h-8">
-                {{ game.comment }}
-              </p>
-              <div class="flex justify-between items-center text-[10px] text-gray-400 mt-2 border-t border-gray-50 pt-2">
-                <div class="flex items-center gap-1.5">
-                  <div class="w-4 h-4 rounded-full bg-gray-200 overflow-hidden">
-                    <img :src="game.cover" class="w-full h-full object-cover opacity-60"> 
-                  </div>
-                  <span class="hover:text-gray-600">{{ game.user }}</span>
-                </div>
-                <div class="text-right flex flex-col items-end leading-none gap-0.5">
-                  <span class="text-green-500 bg-green-50 px-1 rounded transform scale-90 origin-right">{{ game.status }}</span>
-                  <span class="transform scale-90 origin-right">{{ game.time }}</span>
-                </div>
-              </div>
+
+            <div>
+               <h3 class="font-bold text-gray-800 text-sm truncate w-full group-hover:text-hikari-blue transition">
+                 {{ item.title }}
+               </h3>
+               
+               <div class="flex justify-between items-center text-[10px] text-gray-400 mt-1">
+                 <div class="flex items-center gap-1 overflow-hidden">
+                    <n-icon :component="activeReviewTab === 'galgame' ? GameControllerOutline : BookOutline" class="flex-shrink-0" />
+                    <span class="truncate">{{ item.user }}</span>
+                 </div>
+                 <span class="flex-shrink-0">{{ item.time }}</span>
+               </div>
             </div>
           </div>
         </div>
+        
+        <div v-if="loading" class="text-center py-10 text-gray-400">
+           正在获取数据...
+        </div>
+        <div v-else-if="currentReviews.length === 0" class="text-center py-10 text-gray-400">
+           暂无数据
+        </div>
+
       </section>
 
       <section>
@@ -545,7 +478,7 @@ const posts = ref([
         </button>
       </div>
 
-      <div @click="goToDetail(featuredGame.id, 'game')" class="bg-white rounded-lg shadow-sm overflow-hidden group border border-gray-100 cursor-pointer">
+      <div v-if="featuredGame" @click="goToDetail(featuredGame.id, 'game')" class="bg-white rounded-lg shadow-sm overflow-hidden group border border-gray-100 cursor-pointer animate-fade-in">
         <div class="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <h3 class="font-bold text-gray-700 text-sm flex items-center gap-2">
             <span class="w-1 h-4 bg-hikari-pink rounded-full"></span>
@@ -557,7 +490,7 @@ const posts = ref([
           <img :src="featuredGame.cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
           <div class="absolute top-2 right-2 bg-white/90 backdrop-blur text-hikari-pink font-extrabold px-2 py-1 rounded shadow-sm flex flex-col items-center leading-none">
             <span class="text-xl">{{ featuredGame.score }}</span>
-            <span class="text-[10px] text-gray-400">EGS</span>
+            <span class="text-[10px] text-gray-400">评分</span>
           </div>
           <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
              <h4 class="text-white font-bold text-lg shadow-sm truncate w-full">{{ featuredGame.title }}</h4>

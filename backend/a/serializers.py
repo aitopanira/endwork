@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import UserInfo, Tag, Galgame, Novel, Post, Review, UserCollection, GalgameCg,Character
+from .models import UserInfo, Tag, Galgame, Novel, Post, Review, UserCollection, GalgameCg,Character,NovelVolume
 
 # 1. 基础 Tag 序列化器
 class TagSerializer(serializers.ModelSerializer):
@@ -40,11 +40,16 @@ class GalgameSerializer(serializers.ModelSerializer):
     class Meta:
         model = Galgame
         fields = '__all__'
-
+class NovelVolumeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NovelVolume
+        fields = ['id', 'title', 'cover', 'release_date']
 # 5. 小说序列化器
 class NovelSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     characters = CharacterSerializer(many=True, read_only=True)
+    # === 新增这一行：嵌套显示所有卷 ===
+    volumes = NovelVolumeSerializer(many=True, read_only=True)
     class Meta:
         model = Novel
         fields = '__all__'
