@@ -134,3 +134,12 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+# R2 配置
+R2_ACCESS_KEY_ID = '92da60ad0e5da6ed0900c4cfcf7065ce'
+R2_SECRET_ACCESS_KEY = '93957a4e48776dc3c30ddb50ed7babc8db05c695c177915ea24f19c6242859f6'
+# 注意：Endpoint 必须是 https://... 开头，且不带 bucket 名字
+R2_ENDPOINT_URL = 'https://1667ccbfbaa13fc1546b6f415164f667.r2.cloudflarestorage.com'
+R2_BUCKET_NAME = 'my-gal-images' # 你的桶名字
+R2_PUBLIC_DOMAIN = 'https://pub-31746bf4167d45c09c44a61e59e55416.r2.dev' # 你的公开访问前缀

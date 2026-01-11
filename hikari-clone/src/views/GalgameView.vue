@@ -12,6 +12,7 @@ import {
   TimeOutline
 } from '@vicons/ionicons5'
 
+
 const router = useRouter()
 
 // 1. 顶部 Banner
@@ -22,31 +23,24 @@ const banners = [
 
 // 2. 新游速递 (Grid 数据)
 const newGames = ref([])
+// 3. 右侧排行榜
+const rankingList = ref([])
 
 const fetchGames=async()=>{
   try {
     const res=await axios.get('http://127.0.0.1:8000/a/getuser/galgames/')
-    console.log('获取新游数据:',res.data)
+    console.log(res.data)
     newGames.value=res.data
+    rankingList.value=res.data.sort((a,b)=>b.score_avg - a.score_avg).slice(0,5)
   } catch (error) {
     console.error('获取新游数据失败:',error)
     message.error('获取新游数据失败')
   }
 }
-  onMounted(() => {
-  fetchGames()
-})
 
 
-// 3. 右侧排行榜
-const rankingList = ref([
-  { id: 1, title: 'CLANNAD', score: 10.0, trend: 'up' },
-  { id: 2, title: '命运石之门', score: 9.9, trend: 'same' },
-  { id: 3, title: 'White Album 2', score: 9.8, trend: 'up' },
-  { id: 4, title: '樱之诗', score: 9.8, trend: 'down' },
-  { id: 5, title: '美好的每一天', score: 9.7, trend: 'same' },
-  { id: 6, title: 'Ever17', score: 9.6, trend: 'up' },
-])
+
+
 
 // 4. 品牌合作 (Logos)
 const brands = [
@@ -59,33 +53,39 @@ const brands = [
 ]
 
 // 5. 热门点评
-const reviews = ref([
-  {
-    id: 1,
-    game: '千恋＊万花',
-    title: '愿千年之恋，有朝一日能使万花怒放',
-    user: '儚い愛',
-    avatar: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
-    summary: '少女的恋心藏不住—— 在电车仍未开通的深山里、坐落着名为穗织的小镇...',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg'
-  },
-  {
-    id: 2,
-    game: '缘之空',
-    title: '《缘之空》: 盛夏尽头的温柔恋恋',
-    user: 'OfficialBot',
-    avatar: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg',
-    summary: '虽说《缘之空》的大名在ACG圈子内已经如雷贯耳，但是真正推过原作的人似乎并没有多少...',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg'
-  }
-])
+const reviews = ref([])
+const news = ref([])
+const allPosts = ref([])
 
+const fetchNewsPosts = async () => {
+  try {
+    const response = await axios.get('http://127.0.0.1:8000/a/getuser/posts/') 
+    allPosts.value = response.data.map(post => ({
+      id: post.id,
+      title: post.title,
+      date: post.created_at,
+      category: post.category,
+      summary: post.summary || '暂无摘要',
+      cover: post.cover || '暂无封面'
+
+    }))
+    // 过滤出资讯类文章
+    news.value = allPosts.value.filter(p => p.category === 'gal_news' )
+    reviews.value = allPosts.value.filter(p => p.category === 'gal_review')
+  } catch (error) {
+    console.error('获取资讯失败', error)
+  }
+}
 const goToDetail = (id) => {
   router.push(`/galgame/${id}`)
 }
 const goToBrand = (name) => {
   router.push(`/brand/${name}`)
 }
+  onMounted(() => {
+  fetchGames()
+  fetchNewsPosts()
+})
 </script>
 
 <template>
@@ -201,10 +201,6 @@ const goToBrand = (name) => {
               <div class="p-4">
                 <h3 class="font-bold text-gray-800 mb-2 truncate">{{ review.title }}</h3>
                 <p class="text-xs text-gray-500 line-clamp-2 mb-3">{{ review.summary }}</p>
-                <div class="flex items-center gap-2 text-xs text-gray-400">
-                   <n-avatar round :size="20" :src="review.avatar" />
-                   <span>{{ review.user }}</span>
-                </div>
               </div>
             </div>
           </div>
@@ -231,7 +227,7 @@ const goToBrand = (name) => {
                   </span>
                 </div>
                 <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold text-yellow-500">{{ item.score }}</span>
+                  <span class="text-xs font-bold text-yellow-500">{{ item.score_avg }}</span>
                 </div>
               </li>
             </ul>

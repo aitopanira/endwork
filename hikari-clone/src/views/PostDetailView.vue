@@ -1,121 +1,179 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NBreadcrumb, NBreadcrumbItem, NTag, NDivider, NAvatar, NButton, NInput, NIcon, useMessage } from 'naive-ui'
-import { EyeOutline, ChatbubbleOutline, TimeOutline, PersonOutline, HeartOutline, StarOutline, Star } from '@vicons/ionicons5'
+import { 
+  NBreadcrumb, NBreadcrumbItem, NTag, NDivider, NAvatar, NButton, 
+  NInput, NIcon, useMessage, NSpin, NEmpty 
+} from 'naive-ui'
+import { 
+  EyeOutline, ChatbubbleOutline, TimeOutline, HeartOutline, 
+  StarOutline, Star 
+} from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
+import axios from 'axios' 
+import { marked } from 'marked' // 确保安装了: npm install marked
+import asukaImg from '../images/asuka.png'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const userStore = useUserStore()
 
-// 转换 ID 为数字，确保与 Store 中存储的 ID 类型一致
-const postId = Number(route.params.id)
+const postId = route.params.id
 
-// 模拟文章数据
-const article = ref({
-  id: postId,
-  title: '【Gal周报】十二月新作本周发售，《缘起甜韵》登陆Steam',
-  author: '官方Bot',
-  // 补充头像字段，用于收藏列表展示
-  avatar: '官', 
-  date: '2025-12-24',
-  views: 2390,
-  likes: 128,
-  // 补充简介字段，用于收藏列表展示 (如果没有，store 会自动截取 content)
-  summary: '十二月新作已于本周发售，一共有五部作品，其中PC平台有四部作品。这也是本年度最后的一波发售热潮...',
-  content: `
-    <p class="mb-4">十二月新作已于本周发售，一共有五部作品，其中PC平台有四部作品。这也是本年度最后的一波发售热潮，各位玩家准备好了吗？</p>
-    <h3 class="text-xl font-bold my-4 border-l-4 border-pink-400 pl-3">本周重点推荐</h3>
-    <p class="mb-4"><strong>《HaremKingdom》</strong>：SMEE社的经典后宫作，这次的高清重制版诚意满满。画风依旧是那种废萌里带着一点点实用的感觉，早濑老师的原画依然稳定发挥。</p>
-    <div class="my-6 rounded-lg overflow-hidden shadow-md">
-      <img src="https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg" alt="游戏截图" class="w-full" />
-      <p class="text-center text-gray-400 text-xs mt-1">游戏实际运行画面</p>
-    </div>
-    <h3 class="text-xl font-bold my-4 border-l-4 border-pink-400 pl-3">玩家评价</h3>
-    <p class="mb-4">目前Steam好评率98%，大部分玩家表示“SMEE，我的超人”。不过也有人吐槽剧情稍微有点白开水，适合想要放松大脑的时候游玩。</p>
-    <blockquote class="bg-gray-50 border-l-4 border-gray-300 p-4 italic my-4 text-gray-600">
-      “只要有早濑画的妹子，我就无脑买爆！” —— 某资深玩家
-    </blockquote>
-    <p>总之，如果你喜欢轻松愉快的恋爱喜剧，这作绝对不容错过！</p>
-  `,
-  tags: ['Galgame', '资讯', 'SMEE', 'Steam']
-})
+// 状态管理
+const loading = ref(true)
+const error = ref(null)
+const article = ref({}) // 初始化为空对象
+const comments = ref([])  
+const commentContent = ref('') 
 
-// 模拟评论数据
-const comments = ref([
-  { id: 1, user: '路人A', content: 'SMEE！我的超人！钱包已经准备好了。', time: '2小时前', avatar: '路' }, 
-  { id: 2, user: '纯爱战神', content: '这画风真的很顶，希望汉化质量能在线。', time: '5小时前', avatar: '纯' }, 
-  { id: 3, user: 'HikariAdmin', content: '感谢搬运，已加入愿望单。', time: '1天前', avatar: 'H' } 
-])
+// === 1. 获取文章详情 ===
+const fetchArticleDetail = async () => {
+  try {
+    loading.value = true
+    
+    // 真实接口请求
+    const response = await axios.get(`http://127.0.0.1:8000/a/getuser/posts/${postId}/`)
+    console.log('后端返回数据:', response.data) // 调试用
+    
+    const data = response.data
+    
+    // 核心步骤：将包含 \r\n 的纯文本转换为 HTML
+    // marked 会把 \r\n\r\n 转换成 <p>...</p>，把 \n 转换成 <br>
+    const parsedHtml = marked.parse(data.content || '')
 
-// === 核心：从 Store 获取收藏状态 ===
+    // 数据映射 (Mapping)
+    article.value = {
+      id: data.id,
+      title: data.title,
+      content: parsedHtml, // 使用解析后的 HTML
+      cover: data.cover,
+      category: data.category,
+      created_at: data.created_at,
+      views: data.views,
+      likes: data.likes,
+      // 注意：后端 author 是一个对象 {id, name, avatar...}
+      author: {
+        name: data.author?.name || '未知用户',
+        avatar: data.author?.avatar || '', 
+        bio: data.author?.bio
+      }
+    }
+
+  } catch (err) {
+    console.error('获取文章失败:', err)
+    error.value = '文章不存在或已被删除'
+  } finally {
+    loading.value = false
+  }
+}
+// === 2. 获取评论列表 (测试模式：写死数据) ===
+const fetchComments = async () => {
+  try {
+    // 👇 使用写死的评论数据
+    comments.value = [
+      {
+        id: 1,
+        user: { name: '热心网友A', avatar: null },
+        content: '前排围观，这个页面做的不错！',
+        created_at: '2026-01-09 12:30'
+      },
+      {
+        id: 2,
+        user: { name: '催更狂魔', avatar: null },
+        content: 'GKD GKD，生产队的驴都不敢这么歇。',
+        created_at: '2026-01-09 13:00'
+      }
+    ]
+  } catch (err) {
+    console.error('获取评论失败', err)
+  }
+}
+// === 3. 判断是否已收藏 ===
 const isFavorited = computed(() => {
-  if (!userStore.userInfo) return false
-  return userStore.articleLibrary.some(a => a.id === article.value.id)
+  if (!userStore.userInfo || !article.value) return false
+  return false 
 })
-
-// === 交互：处理收藏/取消收藏 ===
-const handleFavorite = () => {
+// === 4. 交互：收藏/取消收藏 ===
+const handleFavorite = async () => {
   if (!userStore.userInfo) {
     message.warning('请先登录')
     router.push('/login')
     return
   }
+  message.success('收藏功能前端测试中...')
 
-  // 调用 Store 方法
-  const isAdded = userStore.toggleArticleFavorite(article.value)
-  
-  if (isAdded) {
-    message.success('收藏成功！已加入收藏夹')
-    article.value.likes++ 
-  } else {
-    message.info('已取消收藏')
-    article.value.likes--
-  }
 }
+// === 5. 提交评论 ===
 
-// 评论功能
-const commentContent = ref('')
+const submitComment = async () => {
 
-const submitComment = () => {
   if (!userStore.userInfo) {
+
     message.warning('请先登录后再发表评论')
+
     router.push('/login')
+
     return
+
   }
 
   if (!commentContent.value.trim()) {
-    message.warning('评论内容不能为空哦')
+
+    message.warning('评论内容不能为空')
+
     return
+
   }
 
-  const userAvatarChar = userStore.userInfo.name.charAt(0).toUpperCase()
-
-  const newComment = {
+  // 模拟前端添加一条评论
+  comments.value.unshift({
     id: Date.now(),
-    user: userStore.userInfo.name,
+    user: { name: userStore.userInfo.name, avatar: userStore.userInfo.avatar },
     content: commentContent.value,
-    time: '刚刚',
-    avatar: userAvatarChar
-  }
-
-  comments.value.unshift(newComment)
+    created_at: '刚刚'
+  })
   commentContent.value = ''
-  message.success('评论发表成功！')
+  message.success('评论发表成功 (测试)')
 }
+
+
+// 格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleDateString('zh-CN', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  })
+}
+
+onMounted(() => {
+  fetchArticleDetail()
+  fetchComments()
+})
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-50 py-6 animate-fade-in">
-    <div class="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-4 gap-6">
+    
+    <div v-if="loading" class="flex justify-center items-center h-[50vh]">
+      <n-spin size="large" description="正在加载文章..." />
+    </div>
+
+    <div v-else-if="error" class="flex justify-center items-center h-[50vh]">
+      <n-empty description="找不到这篇文章">
+        <template #extra>
+          <n-button @click="router.push('/')">返回首页</n-button>
+        </template>
+      </n-empty>
+    </div>
+
+    <div v-else-if="article.id" class="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-4 gap-6">
       
       <main class="lg:col-span-3 bg-white p-6 sm:p-10 rounded-xl shadow-sm border border-gray-100">
         
         <n-breadcrumb class="mb-6">
           <n-breadcrumb-item @click="router.push('/')">首页</n-breadcrumb-item>
-          <n-breadcrumb-item>文章详情</n-breadcrumb-item>
           <n-breadcrumb-item>{{ article.title }}</n-breadcrumb-item>
         </n-breadcrumb>
 
@@ -124,115 +182,40 @@ const submitComment = () => {
         </h1>
         
         <div class="flex flex-wrap items-center gap-4 sm:gap-8 text-gray-400 text-sm mb-8 pb-6 border-b border-gray-100">
-          <div class="flex items-center gap-2">
-            <n-avatar round size="small" class="bg-hikari-pink text-white">官</n-avatar>
-            <span class="text-gray-600 font-medium cursor-pointer hover:text-hikari-pink">{{ article.author }}</span>
-          </div>
-          <span class="flex items-center gap-1"><n-icon :component="TimeOutline"/> {{ article.date }}</span>
-          <span class="flex items-center gap-1"><n-icon :component="EyeOutline"/> {{ article.views }} 阅读</span>
-          <span class="flex items-center gap-1 cursor-pointer hover:text-red-500 transition"><n-icon :component="HeartOutline"/> {{ article.likes }} 点赞</span>
+          <span class="flex items-center gap-1">
+             <n-icon :component="TimeOutline"/> {{ formatDate(article.created_at) }}
+          </span>
+        </div>
+
+        <div v-if="article.cover" class="mb-8 rounded-lg overflow-hidden shadow-sm">
+           <img :src="article.cover" class="w-full object-cover max-h-[400px]" alt="文章封面" />
         </div>
 
         <div class="article-content text-gray-700 leading-8 text-lg" v-html="article.content"></div>
 
-        <div class="mt-10 flex flex-wrap gap-2">
-          <n-tag v-for="tag in article.tags" :key="tag" round :bordered="false" type="info" size="small" class="cursor-pointer hover:opacity-80">
-            # {{ tag }}
-          </n-tag>
-        </div>
-
         <n-divider />
-
         <div class="mt-8">
-          <h3 class="text-xl font-bold mb-6 flex items-center gap-2 text-gray-700">
-            <n-icon :component="ChatbubbleOutline" /> 评论 ({{ comments.length }})
-          </h3>
-          
-          <div class="flex gap-4 mb-8">
-            <n-avatar 
-              round 
-              size="medium" 
-              :src="userStore.userInfo ? userStore.userInfo.avatar : 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg'" 
-            />
-            <div class="flex-grow">
-              <n-input 
-                v-model:value="commentContent" 
-                type="textarea" 
-                :placeholder="userStore.userInfo ? '发一条友善的评论吧...' : '请登录后发表评论'" 
-                :rows="3" 
-                class="bg-gray-50" 
-              />
-              <div class="mt-3 text-right">
-                <n-button 
-                  type="primary" 
-                  color="#fb7299" 
-                  class="px-6 shadow-md hover:shadow-lg"
-                  @click="submitComment"
-                >
-                  发表评论
-                </n-button>
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-6">
-            <div v-for="comment in comments" :key="comment.id" class="flex gap-4 group">
-              
-              <n-avatar round size="small" class="bg-gray-200 text-gray-500 font-bold flex-shrink-0">
-                {{ comment.avatar }}
-              </n-avatar>
-
-              <div class="flex-grow border-b border-gray-50 pb-4 group-last:border-none">
-                <div class="flex justify-between items-center mb-1">
-                  <span class="font-bold text-gray-700 text-sm">{{ comment.user }}</span>
-                  <span class="text-xs text-gray-400">{{ comment.time }}</span>
-                </div>
-                <p class="text-gray-600 text-sm">{{ comment.content }}</p>
-              </div>
-            </div>
-          </div>
+            <h3 class="text-xl font-bold mb-6 flex items-center gap-2 text-gray-700">
+                <n-icon :component="ChatbubbleOutline" /> 评论区
+            </h3>
+            <n-empty description="评论功能开发中..." />
         </div>
+
       </main>
 
       <aside class="lg:col-span-1 space-y-6">
-        
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 sticky top-24">
           <div class="flex flex-col items-center text-center mb-6">
-            <n-avatar round :size="80" class="mb-4 bg-hikari-pink text-white text-2xl shadow-md border-4 border-pink-50">
-              官
-            </n-avatar>
-            <h3 class="font-bold text-lg text-gray-800">{{ article.author }}</h3>
-            <p class="text-gray-500 text-xs mt-1">资深 Galgame 鉴赏家，专注搬运最新资讯。</p>
+            <img :src="asukaImg" alt="看板娘" class="w-full h-auto rounded-lg mb-4 shadow-md hover:scale-105 transition-transform duration-300">
+            <h3 class="font-bold text-lg text-gray-800">喜欢文章，点击收藏</h3>
           </div>
-          
-          <div class="grid grid-cols-2 gap-3 mb-6">
-            <div class="text-center bg-gray-50 py-2 rounded">
-              <span class="block font-bold text-gray-700">128</span>
-              <span class="text-xs text-gray-400">收藏</span>
-            </div>
-            <div class="text-center bg-gray-50 py-2 rounded">
-              <span class="block font-bold text-gray-700">2.3k</span>
-              <span class="text-xs text-gray-400">发布</span>
-            </div>
-          </div>
-
           <div class="space-y-3">
-            <n-button 
-              block 
-              :type="isFavorited ? 'primary' : 'default'" 
-              :secondary="!isFavorited" 
-              :color="isFavorited ? '#fb7299' : undefined"
-              class="transition-all duration-300"
-              @click="handleFavorite"
-            >
-              <template #icon>
-                <n-icon :component="isFavorited ? Star : StarOutline" :color="isFavorited ? '#fff' : '#fb7299'" />
-              </template>
-              {{ isFavorited ? '已收藏' : '收藏文章' }}
-            </n-button>
+             <n-button block secondary type="primary" color="#fb7299">
+                 <template #icon><n-icon :component="HeartOutline" /></template>
+                 收藏文章 ({{ article.likes }})
+             </n-button>
           </div>
         </div>
-
       </aside>
 
     </div>
@@ -247,8 +230,29 @@ const submitComment = () => {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
+/* === 正文样式优化 === */
+/* 处理段落间距：marked 会生成 <p> 标签 */
 :deep(.article-content p) {
-  margin-bottom: 1.2em;
+  margin-bottom: 1.5em; /* 段落之间空一行 */
+  text-align: justify;  /* 两端对齐 */
+  /* ⚠️ 关键：如果 marked 解析没生效，这行 CSS 会强制处理 \n 换行符 */
+  white-space: pre-wrap; 
+}
+/* 处理标题 */
+:deep(.article-content h1), 
+:deep(.article-content h2), 
+:deep(.article-content h3) {
+  margin-top: 1.5em;
+  margin-bottom: 0.8em;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+/* 图片自适应 */
+:deep(.article-content img) {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 1em 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 </style>

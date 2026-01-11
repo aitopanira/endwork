@@ -6,16 +6,14 @@ import PostDetailView from '../views/PostDetailView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import GalgameDetailView from '@/views/GalgameDetailView.vue'
 import NovelDetailView from '@/views/NovelDetailView.vue'
-import CommunityView from '@/views/CommunityView.vue'  
 import GalgameView from '@/views/GalgameView.vue'
 import NovelView from '@/views/NovelView.vue'
 import BrandDetailView from '@/views/BrandDetailView.vue'
-import AllBrandsView from '@/views/AllBrandsView.vue'
+
 import ReaderView from '@/views/ReaderView.vue'
 import CreatorCenterView from '@/views/CreatorCenterView.vue'
-import TopicDetailView from '@/views/TopicDetailView.vue'
-import SectionDetailView from '@/views/SectionDetailView.vue'
 import UserLibraryView from '@/views/UserLibraryView.vue'
+import SearchView from '@/views/SearchView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -62,26 +60,16 @@ const router = createRouter({
       name: 'novel-detail', 
       component: NovelDetailView
     },
-    { 
-      path: '/community', 
-      name: 'community', 
-      component: CommunityView
-    },
     {
       path: '/brand/:name', 
       name: 'brand-detail', 
       component: BrandDetailView
     },
-    { 
-      path: '/brands', 
-      name: 'all-brands', 
-      component: AllBrandsView 
-    },
     {
       path: '/read/:id',
       name: 'reader',
-      component: ReaderView
-      // 如果阅读需要登录，可以在这里加 meta: { requiresAuth: true }
+      component: ReaderView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/creator',
@@ -90,21 +78,16 @@ const router = createRouter({
       meta: { requiresAuth: true } // 🔒 保护：创作中心需要登录
     },
     {
-      path: '/community/topic/:id',
-      name: 'topic-detail',
-      component: TopicDetailView
-    },
-    {
-      path: '/community/section/:id',
-      name: 'section-detail',
-      component: SectionDetailView
-    },
-    {
       path: '/library',
       name: 'library',
       component: UserLibraryView,
       meta: { requiresAuth: true } // 🔒 保护：资源库需要登录
     },
+    {
+      path: '/search',
+      name: 'search',
+      component: SearchView
+    }
   ],
 })
 

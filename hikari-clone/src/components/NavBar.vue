@@ -1,21 +1,18 @@
 <script setup>
-// ⚠️ 修复点 1：从 vue 中引入 'h' 函数 (用于渲染图标)
 import { h } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { NInput, NAvatar, NIcon, NDropdown } from 'naive-ui'
-import { SearchOutline, LogOutOutline, PersonOutline, CreateOutline,LibraryOutline } from '@vicons/ionicons5'
+import { NInput, NAvatar, NIcon, NDropdown, NButton } from 'naive-ui'
+// 1. 👇 引入 Search (实心粗体版)，去掉 SearchOutline
+import { Search, LogOutOutline, PersonOutline, CreateOutline, LibraryOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-// 渲染图标的辅助函数
 const renderIcon = (icon) => {
   return () => h(NIcon, null, { default: () => h(icon) })
 }
 
-// 下拉菜单选项
-// ⚠️ 修复点 2：正确使用 h 函数渲染图标
 const userOptions = [
   { 
     label: '个人中心', 
@@ -39,23 +36,18 @@ const userOptions = [
   }
 ]
 
-// 处理下拉菜单点击
 const handleSelect = (key) => {
   if (key === 'logout') {
     userStore.logout()
     window.$message?.success('已退出登录')
     router.push('/login')
   } else if (key === 'profile') {
-    // === 修改这里 ===
-    // 之前是 alert，现在改成跳转
     router.push('/profile')
   }
   else if (key === 'creator-center') {
-    // === 新增这里 ===
-    // 跳转到创作中心页面
     router.push('/creator')
   }
-  else if (key === 'library') { // 新增跳转逻辑
+  else if (key === 'library') { 
     router.push('/library')
   }
 }
@@ -71,18 +63,18 @@ const handleSelect = (key) => {
         </h1>
         <div class="hidden md:flex gap-6 text-gray-600 font-medium text-sm">
           <RouterLink to="/" class="hover:text-hikari-blue transition">首页</RouterLink>
-          <RouterLink to="/community" class="hover:text-hikari-blue transition">社区</RouterLink>
           <RouterLink to="/galgame" class="hover:text-hikari-blue transition">Galgame</RouterLink>
            <RouterLink to="/novel" class="hover:text-hikari-blue transition">轻小说</RouterLink>
         </div>
       </div>
 
       <div class="flex items-center gap-4">
-        <div class="w-64 hidden sm:block">
-          <n-input round placeholder="搜索资源..." size="small">
-            <template #prefix><n-icon :component="SearchOutline" /></template>
-          </n-input>
-        </div>
+        
+        <n-button square quaternary size="large" @click="router.push('/search')">
+          <template #icon>
+            <n-icon :component="Search" color="#fb7299" />
+          </template>
+        </n-button>
         
         <div v-if="userStore.userInfo" class="flex items-center gap-3">
            <span class="text-sm text-gray-600 hidden sm:block">

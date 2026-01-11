@@ -1,97 +1,103 @@
 <script setup>
-import { ref, h } from 'vue' 
+import { ref, h, computed, watch } from 'vue' 
 import { useRouter } from 'vue-router'
 import { 
-  NLayout, NLayoutSider, NMenu, NForm, NFormItem, NInput, NSelect, NButton, 
-  NUpload, NUploadDragger, NIcon, NText, NP, useMessage, NCard, NStatistic, NGrid, NGi
+  NMenu, NForm, NFormItem, NInput, NSelect, NButton, 
+  NUpload, NUploadDragger, NIcon, NText, useMessage
 } from 'naive-ui'
 import { 
-  HomeOutline, CreateOutline, GameControllerOutline, BookOutline, 
-  CloudUploadOutline, SaveOutline, PaperPlaneOutline 
+  GameControllerOutline, BookOutline, CloudUploadOutline, 
+  SaveOutline, PaperPlaneOutline 
 } from '@vicons/ionicons5'
 import { useCommunityStore } from '../stores/community'
-import { useResourceStore } from '../stores/resources'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
 const message = useMessage()
 const communityStore = useCommunityStore()
-const resourceStore = useResourceStore()
 const userStore = useUserStore()
 
-// === 1. 新增：菜单颜色主题覆盖 (粉色系) ===
+// === 1. 菜单样式 (粉色主题) ===
 const menuThemeOverrides = {
-  itemColorActive: 'rgba(251, 114, 153, 0.1)',      // 选中项背景：淡粉色
-  itemColorActiveHover: 'rgba(251, 114, 153, 0.15)', // 选中悬停：稍深的淡粉色
-  itemTextColorActive: '#fb7299',                    // 选中文字颜色：粉色
-  itemIconColorActive: '#fb7299',                    // 选中图标颜色：粉色
-  itemColorHover: 'rgba(251, 114, 153, 0.05)',       // 未选中悬停背景：极淡粉色
-  itemTextColorHover: '#fb7299',                     // 未选中悬停文字：粉色
-  itemIconColorHover: '#fb7299'                      // 未选中悬停图标：粉色
+  itemColorActive: 'rgba(251, 114, 153, 0.1)',
+  itemColorActiveHover: 'rgba(251, 114, 153, 0.15)',
+  itemTextColorActive: '#fb7299',
+  itemIconColorActive: '#fb7299',
+  itemColorHover: 'rgba(251, 114, 153, 0.05)',
+  itemTextColorHover: '#fb7299',
+  itemIconColorHover: '#fb7299'
 }
 
-// === 侧边栏导航 ===
-const activeKey = ref('dashboard')
+// === 2. 侧边栏菜单 (拆分为两个独立的板块) ===
+const activeKey = ref('gal_post') // 默认选中 Galgame 投稿
+
 const menuOptions = [
-  { label: '创作仪表盘', key: 'dashboard', icon: () => h(NIcon, null, { default: () => h(HomeOutline) }) },
-  { label: '发布帖子 (社区)', key: 'post', icon: () => h(NIcon, null, { default: () => h(CreateOutline) }) },
-  { label: '投稿 Galgame', key: 'galgame', icon: () => h(NIcon, null, { default: () => h(GameControllerOutline) }) },
-  { label: '投稿 轻小说', key: 'novel', icon: () => h(NIcon, null, { default: () => h(BookOutline) }) },
+  { 
+    label: 'Galgame 资讯投稿', 
+    key: 'gal_post', 
+    icon: () => h(NIcon, null, { default: () => h(GameControllerOutline) }) 
+  },
+  { 
+    label: '轻小说 资讯投稿', 
+    key: 'novel_post', 
+    icon: () => h(NIcon, null, { default: () => h(BookOutline) }) 
+  }
 ]
 
-// === 表单数据 ===
+// === 3. 表单数据模型 ===
 const formData = ref({
   title: '',
   content: '', 
-  tag: null,
   cover: null,
-  developer: '', 
-  author: '',    
-  originalTitle: '',
-  date: null
+  category: null 
 })
 
-// === 提交逻辑 ===
-const handleSubmit = () => {
-  if (!formData.value.title) return message.warning('标题不能为空')
+// === 4. 动态计算：页面标题 ===
+const pageTitle = computed(() => {
+  return activeKey.value === 'gal_post' ? '发布 Galgame 相关资讯' : '发布 轻小说 相关资讯'
+})
 
-  // 1. 社区帖子投稿
-  if (activeKey.value === 'post') {
-    communityStore.addPost({
-      title: formData.value.title,
-      summary: formData.value.content,
-      author: userStore.userInfo?.name || '匿名用户',
-      avatar: userStore.userInfo?.avatar || '',
-      tag: formData.value.tag || '日常',
-      image: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg' 
-    })
-    message.success('帖子发布成功！')
-    router.push('/community')
-  } 
-  // 2. Galgame 投稿
-  else if (activeKey.value === 'galgame') {
-    resourceStore.addGalgame({
-      title: formData.value.title,
-      originalTitle: formData.value.originalTitle,
-      developer: formData.value.developer,
-      description: `<p>${formData.value.content}</p>`,
-      tags: [formData.value.tag || '新作'],
-      cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg'
-    })
-    message.success('Galgame 词条提交成功！')
-    router.push('/galgame')
+// === 5. 动态计算：分类选项 ===
+// 根据左侧菜单选中的不同，右侧下拉框只显示对应的选项
+const currentCategoryOptions = computed(() => {
+  if (activeKey.value === 'gal_post') {
+    return [
+      { label: 'Galgame 资讯', value: 'gal_news' },
+      { label: 'Galgame 点评', value: 'gal_review' }
+    ]
+  } else {
+    return [
+      { label: '轻小说资讯', value: 'novel_news' },
+      { label: '轻小说点评', value: 'novel_review' }
+    ]
   }
-  // 3. 轻小说 投稿
-  else if (activeKey.value === 'novel') {
-    resourceStore.addNovel({
+})
+
+// === 6. 监听菜单切换，清空分类防止选错 ===
+watch(activeKey, () => {
+  formData.value.category = null // 切换板块时，重置分类
+})
+
+// === 7. 提交逻辑 ===
+const handleSubmit = async () => {
+  if (!formData.value.title) return message.warning('标题不能为空')
+  if (!formData.value.category) return message.warning('请选择具体的分类')
+  
+  try {
+    await communityStore.addPost({
       title: formData.value.title,
-      author: formData.value.author,
-      description: `<p>${formData.value.content}</p>`,
-      tags: [formData.value.tag || '轻小说'],
-      cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg'
+      content: formData.value.content,
+      // 自动截取摘要
+      summary: formData.value.content.substring(0, 100), 
+      category: formData.value.category, 
+      cover: '', // 待接接口
+      author: userStore.userInfo?.id 
     })
-    message.success('轻小说 词条提交成功！')
-    router.push('/novel')
+    message.success('发布成功！')
+    router.push('/') 
+  } catch (error) {
+    console.error(error)
+    message.error('发布失败，请稍后重试')
   }
 }
 </script>
@@ -120,46 +126,13 @@ const handleSubmit = () => {
 
     <div class="flex-grow overflow-y-auto p-8">
       
-      <div v-if="activeKey === 'dashboard'" class="max-w-4xl mx-auto space-y-8">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800 mb-2">欢迎回来，{{ userStore.userInfo?.name || '旅行者' }}</h1>
-          <p class="text-gray-500">今天想分享些什么有趣的内容呢？</p>
-        </div>
-
-        <n-grid x-gap="12" :cols="3">
-          <n-gi>
-            <n-card>
-              <n-statistic label="我的帖子" value="12" />
-            </n-card>
-          </n-gi>
-          <n-gi>
-            <n-card>
-              <n-statistic label="获得的赞" value="1,204" />
-            </n-card>
-          </n-gi>
-          <n-gi>
-            <n-card>
-              <n-statistic label="创作等级" value="Lv.3" />
-            </n-card>
-          </n-gi>
-        </n-grid>
-
-        <n-card title="创作草稿箱" size="small">
-          <div class="py-8 text-center text-gray-400">暂无草稿</div>
-        </n-card>
-      </div>
-
-      <div v-else class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+      <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 p-8">
         
         <div class="flex justify-between items-center mb-8 border-b border-gray-100 pb-4">
           <h2 class="text-xl font-bold text-gray-800">
-            {{ activeKey === 'post' ? '发布新帖子' : activeKey === 'galgame' ? '提交 Galgame 词条' : '提交轻小说词条' }}
+            {{ pageTitle }}
           </h2>
           <div class="flex gap-3">
-            <n-button secondary color="#fb7299">
-              <template #icon><n-icon :component="SaveOutline" /></template>
-              存草稿
-            </n-button>
             <n-button type="primary" color="#fb7299" @click="handleSubmit">
               <template #icon><n-icon :component="PaperPlaneOutline" /></template>
               立即发布
@@ -169,60 +142,35 @@ const handleSubmit = () => {
 
         <n-form ref="formRef" :model="formData" label-placement="top">
           
-          <n-form-item label="标题 / 名称">
+          <n-form-item label="文章标题">
             <n-input v-model:value="formData.title" placeholder="请输入标题" size="large" />
           </n-form-item>
 
-          <div v-if="activeKey !== 'post'" class="grid grid-cols-2 gap-4">
-            <n-form-item label="原名 (Original Title)">
-              <n-input v-model:value="formData.originalTitle" placeholder="日语原名" />
-            </n-form-item>
-            
-            <n-form-item :label="activeKey === 'galgame' ? '开发商 (Developer)' : '作者 (Author)'">
-              
-              <n-input 
-                v-if="activeKey === 'galgame'" 
-                v-model:value="formData.developer" 
-                placeholder="请输入开发商"
+          <n-form-item label="细分领域">
+             <n-select 
+                v-model:value="formData.category" 
+                :options="currentCategoryOptions" 
+                placeholder="请选择是资讯还是点评"
               />
-              
-              <n-input 
-                v-else 
-                v-model:value="formData.author" 
-                placeholder="请输入作者"
-              />
-            </n-form-item>
-          </div>
+          </n-form-item>
 
-          <n-form-item :label="activeKey === 'post' ? '正文内容' : '剧情简介'">
+          <n-form-item label="正文内容">
             <n-input
               v-model:value="formData.content"
               type="textarea"
-              placeholder="支持 Markdown 语法..."
-              :autosize="{ minRows: 8 }"
+              placeholder="在这里撰写内容..."
+              :autosize="{ minRows: 12 }"
             />
           </n-form-item>
 
-          <n-form-item label="选择标签">
-            <n-select 
-              v-model:value="formData.tag" 
-              :options="[
-                { label: '闲聊', value: '闲聊' }, 
-                { label: '评测', value: '评测' },
-                { label: '资讯', value: '资讯' },
-                { label: '攻略', value: '攻略' },
-                { label: '新作', value: '新作' }
-              ]" 
-            />
-          </n-form-item>
-
-          <n-form-item label="上传封面/配图">
+          <n-form-item label="文章封面">
             <n-upload directory-dnd :max="1">
               <n-upload-dragger>
                 <div style="margin-bottom: 12px">
                   <n-icon size="48" :depth="3" :component="CloudUploadOutline" />
                 </div>
                 <n-text style="font-size: 16px">点击或拖拽图片到此处</n-text>
+                <div class="text-xs text-gray-400 mt-2">建议尺寸 16:9，支持 jpg/png</div>
               </n-upload-dragger>
             </n-upload>
           </n-form-item>

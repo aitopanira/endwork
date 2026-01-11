@@ -95,7 +95,7 @@ class NovelViewSet(viewsets.ModelViewSet):
 
 # === 帖子视图 ===
 class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all()
+    queryset = Post.objects.all().order_by('-created_at', '-is_pinned')
     serializer_class = PostSerializer
 
 # === 评论视图 ===

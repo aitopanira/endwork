@@ -4,8 +4,7 @@ import { useRouter } from 'vue-router'
 import { NCarousel, NAvatar, NIcon, useMessage } from 'naive-ui' 
 import { EyeOutline, HeartOutline, GameControllerOutline, BookOutline } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user' 
-import PostCard from '../components/PostCard.vue'
-import axios from 'axios'
+import axios, { all } from 'axios'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -22,6 +21,7 @@ const goToDetail = (id, type = 'post') => {
   } else if (type === 'book' || type === 'novel') {
     router.push(`/novel/${id}`)
   } else {
+    // 资讯/文章跳转到这里
     router.push(`/post/${id}`)
   }
 }
@@ -55,8 +55,32 @@ const banners = [
   'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg',
 ]
 
-// 最新资讯数据
-const newsPosts = ref([])
+// === 👇 修改点：填充测试用的假数据，用于测试跳转功能 ===
+const allPosts = ref([])
+const allNews = ref([])
+const allReviews = ref([])
+
+
+const fetchNewsPosts = async () => {
+  try {
+    const response = await axios.get('http://127.0.0.1:8000/a/getuser/posts/') 
+    allPosts.value = response.data.map(post => ({
+      id: post.id,
+      title: post.title,
+      date: post.created_at,
+      category: post.category,
+      summary: post.summary || '暂无摘要',
+      cover: post.cover || '暂无封面'
+
+    }))
+    // 过滤出资讯类文章
+    allNews.value = allPosts.value.filter(p => p.category === 'gal_news' || p.category === 'novel_news')
+    allReviews.value = allPosts.value.filter(p => p.category === 'gal_review' || p.category === 'novel_review')
+  } catch (error) {
+    console.error('获取资讯失败', error)
+  }
+}
+
 
 // === 数据源 A：Galgame 评分 (已按分数排序) ===
 const galgameReviews = ref([])
@@ -66,10 +90,10 @@ const fetchGalgameReviews = async () => {
   try {
     const response = await axios.get('http://127.0.0.1:8000/a/getuser/galgames/')
     if (response.data && Array.isArray(response.data)) {
-        // 👇 核心修改：先按 score_avg 降序排序，再取前 8 个
+        // 先按 score_avg 降序排序，再取前 8 个
         galgameReviews.value = response.data
-          .sort((a, b) => (b.score_avg || 0) - (a.score_avg || 0)) // 降序排列
-          .slice(0, 8) // 取前8个
+          .sort((a, b) => (b.score_avg || 0) - (a.score_avg || 0)) 
+          .slice(0, 8) 
           .map(game => ({
             id: game.id,
             title: game.title,
@@ -96,12 +120,10 @@ const fetchLightNovelReviews = async () => {
   try {
     loading.value = true
     const response = await axios.get('http://127.0.0.1:8000/a/getuser/novels/')
-    
     if (response.data && Array.isArray(response.data)) {
-      // 👇 核心修改：同样先排序再截取
       lightNovelReviews.value = response.data
-        .sort((a, b) => (b.score_avg || 0) - (a.score_avg || 0)) // 降序排列
-        .slice(0, 8) // 取前8个
+        .sort((a, b) => (b.score_avg || 0) - (a.score_avg || 0)) 
+        .slice(0, 8) 
         .map(novel => ({
           id: novel.id,
           title: novel.title,
@@ -153,89 +175,20 @@ const fetchFeaturedGame = async () => {
     console.error('获取本月强推失败:', error)
   }
 }
-
-// 侧边栏：热门点评
-const popularReviews = ref([
-  {
-    id: 1,
-    title: '愿千年之恋，有朝一日能使万花怒放。',
-    source: '千恋＊万花',
-    type: 'game',
-    summary: '少女的恋心藏不住—— 在电车仍未开通的深山里...',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg',
-    author: '儚い愛',
-    views: 602,
-    likes: 4,
-    time: '26天前'
-  },
-  {
-    id: 2,
-    title: '在点滴的拉扯日常中，确认彼此之间的心意',
-    source: '一周一次买下同班同学的那些事',
-    type: 'book',
-    summary: '声明：本篇文章含有一定程度的轻小说和web版剧透内容...',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg',
-    author: 'klseka',
-    views: 505,
-    likes: 5,
-    time: '大约1个月前'
-  },
-  {
-    id: 3,
-    title: '『黑百合的花语是爱，也是诅咒，所以...』',
-    source: '提早绽放的黑百合',
-    type: 'game',
-    summary: '14小时一口气推完《绽放的黑百合》有感...',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg',
-    author: 'RizuoMi',
-    views: 669,
-    likes: 3,
-    time: '大约2个月前'
-  }
-])
-
-// 社区动态
-const posts = ref([
-  {
-    id: 10,
-    title: '【Gal周报222期】十二月新作本周发售，《缘起甜韵》登陆Steam',
-    summary: '十二月新作已于本周发售，一共有五部作品，快来看看有没有你喜欢的吧...',
-    author: '官方bot',
-    date: '18小时前',
-    views: 2390,
-    comments: 22,
-    tag: '资讯',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg'
-  },
-  {
-    id: 11,
-    title: '关于Hikarinagi下载服务变更的说明',
-    summary: '话说，Hikarinagi在把下载服务从onedrive移到b2+cf后，下载体验就很感人...',
-    author: '星涟',
-    date: '1天前',
-    views: 4012,
-    comments: 8,
-    tag: '公告',
-    cover: null 
-  },
-  {
-    id: 12,
-    title: 'Key社新作《anemoi》2026年1月30日发售预定',
-    summary: 'Key社终于公布了新作的详细情报，这次的剧本由...',
-    author: '搬运工',
-    date: '2天前',
-    views: 885,
-    comments: 45,
-    tag: '新闻',
-    cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg'
-  }
-])
-
+//格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleDateString('zh-CN', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  })
+}
 // === 生命周期 ===
 onMounted(() => {
   fetchGalgameReviews()
   fetchLightNovelReviews()
   fetchFeaturedGame()
+  // fetchArticle
+  fetchNewsPosts() // 未来启用
 })
 </script>
 
@@ -327,7 +280,7 @@ onMounted(() => {
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10">
           <div 
-            v-for="item in newsPosts" 
+            v-for="item in allNews" 
             :key="item.id" 
             @click="goToDetail(item.id, 'post')"
             class="flex gap-4 group cursor-pointer"
@@ -340,9 +293,8 @@ onMounted(() => {
                 {{ item.title }}
               </h3>
               <div class="flex items-center gap-2 text-xs text-gray-400 mb-2">
-                <n-avatar round :size="16" :src="item.cover" />
-                <span class="text-gray-500">{{ item.author }}</span>
-                <span>{{ item.date }}</span>
+               
+                <span>{{ formatDate(item.date) }}</span>
               </div>
               <p class="text-xs text-gray-500 leading-relaxed line-clamp-2">
                 {{ item.summary }}
@@ -362,7 +314,7 @@ onMounted(() => {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           <div 
-            v-for="item in popularReviews" 
+            v-for="item in allReviews" 
             :key="item.id" 
             @click="goToDetail(item.id, item.type)"
             class="group cursor-pointer flex flex-col h-full"
@@ -373,7 +325,7 @@ onMounted(() => {
                  <div class="text-white text-[10px] flex items-center gap-1">
                    <n-icon v-if="item.type === 'game'" :component="GameControllerOutline" />
                    <n-icon v-else :component="BookOutline" />
-                   <span class="truncate">{{ item.source }}</span>
+                   
                  </div>
               </div>
             </div>
@@ -387,30 +339,13 @@ onMounted(() => {
               </p>
               
               <div class="flex items-center justify-between text-[10px] text-gray-400 mt-auto pt-2 border-t border-gray-50">
-                <div class="flex items-center gap-1.5">
-                   <n-avatar round :size="16" :src="item.cover" class="opacity-80"/>
-                   <span class="hover:text-gray-600 truncate max-w-[60px]">{{ item.author }}</span>
-                </div>
                 <div class="flex items-center gap-2">
-                  <span class="flex items-center gap-0.5"><n-icon :component="EyeOutline"/> {{ item.views }}</span>
-                  <span class="flex items-center gap-0.5 hover:text-red-400 transition"><n-icon :component="HeartOutline"/> {{ item.likes }}</span>
-                  <span>{{ item.time }}</span>
+
                 </div>
               </div>
             </div>
 
           </div>
-        </div>
-      </section>
-
-      <section>
-        <div class="flex items-center gap-4 mb-4 border-b pb-2">
-          <h2 class="text-xl font-bold text-gray-700 border-l-4 border-hikari-pink pl-3">
-            社区动态
-          </h2>
-        </div>
-        <div class="space-y-4">
-          <PostCard v-for="item in posts" :key="item.id" :post="item" />
         </div>
       </section>
 
