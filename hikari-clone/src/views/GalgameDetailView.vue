@@ -180,8 +180,8 @@ const handleShare = () => message.success('链接已复制到剪贴板')
             </div>
 
             <div class="flex-grow pt-2">
-              <h1 class="text-4xl font-bold mb-2 text-shadow">{{ game.title }}</h1>
-              <h2 class="text-lg text-white/60 mb-6 font-medium">{{ game.originalTitle }}</h2>
+              <h1 class="text-4xl font-bold mb-2 text-shadow">{{ game.originalTitle }}</h1>
+              <h2 class="text-lg text-white/60 mb-6 font-medium">{{ game.title }}</h2>
               
               <div class="flex flex-wrap gap-4 mb-8">
                 <n-button @click="handleStatusChange('wish')" :type="currentStatus === 'wish' ? 'error' : 'default'" :secondary="currentStatus !== 'wish'" :color="currentStatus === 'wish' ? undefined : '#f87171'" size="large" class="w-32 font-bold shadow-lg">

@@ -30,7 +30,7 @@ class Galgame(models.Model):
     release_date = models.DateField(null=True, blank=True, verbose_name="发售日期")
     price = models.CharField(max_length=50, blank=True, verbose_name="价格")
     description = models.TextField(verbose_name="剧情简介")
-    cover = models.URLField(verbose_name="封面图链接")
+    cover = models.URLField(verbose_name="封面图链接",max_length=1000)
     tags = models.ManyToManyField(Tag, blank=True, verbose_name="标签")
     
     score_avg = models.FloatField(default=0.0, verbose_name="平均评分")
@@ -41,7 +41,7 @@ class Galgame(models.Model):
     
 class GalgameCg(models.Model):
     galgame = models.ForeignKey(Galgame, on_delete=models.CASCADE, related_name='cgs', verbose_name="所属Galgame")
-    image_url = models.URLField(verbose_name="CG图片链接")
+    image_url = models.URLField(verbose_name="CG图片链接", max_length=1000)
 
     def __str__(self):
         return f"{self.galgame.title}的 CG"
@@ -55,7 +55,7 @@ class Novel(models.Model):
     publisher = models.CharField(max_length=100, blank=True, verbose_name="出版社")
     status = models.CharField(max_length=20, default='连载中', verbose_name="连载状态")
     description = models.TextField(verbose_name="简介")
-    cover = models.URLField(verbose_name="封面图链接")
+    cover = models.URLField(verbose_name="封面图链接" ,max_length=1000)
     tags = models.ManyToManyField(Tag, blank=True)
     
     score_avg = models.FloatField(default=0.0, verbose_name="平均评分")
@@ -67,7 +67,7 @@ class Novel(models.Model):
 class NovelVolume(models.Model):
     novel = models.ForeignKey(Novel, on_delete=models.CASCADE, related_name='volumes', verbose_name="所属小说")
     title = models.CharField(max_length=200, verbose_name="卷名") 
-    cover = models.URLField(max_length=500, blank=True, null=True, verbose_name="本卷封面")
+    cover = models.URLField(max_length=1000, blank=True, null=True, verbose_name="本卷封面")
     release_date = models.DateField(blank=True, null=True, verbose_name="发售日")
 
     def __str__(self):
@@ -88,7 +88,7 @@ class Post(models.Model):
     title = models.CharField(max_length=200, verbose_name="标题")
     summary = models.TextField(max_length=500, verbose_name="摘要", help_text="用于首页显示的简短介绍")
     content = models.TextField(verbose_name="正文内容") # 建议前端使用富文本编辑器
-    cover = models.URLField(null=True, blank=True, verbose_name="封面图")
+    cover = models.URLField(null=True, blank=True, verbose_name="封面图",max_length=1000)
     
     # 修改了这里：默认分类改为 news，且选项不再包含“闲聊”
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='news', verbose_name="资讯分类")
@@ -118,7 +118,7 @@ class Review(models.Model):
     ]
     user = models.ForeignKey(UserInfo, on_delete=models.CASCADE)
     
-    target_type = models.CharField(max_length=10, choices=TARGET_CHOICES) 
+    target_type = models.CharField(max_length=100, choices=TARGET_CHOICES) 
     target_id = models.IntegerField() 
     
     content = models.TextField(verbose_name="评论内容")
@@ -178,7 +178,7 @@ class Character(models.Model):
     name = models.CharField(max_length=100, verbose_name="角色名")
     cv = models.CharField(max_length=50, blank=True, verbose_name="声优(CV)")
     description = models.TextField(verbose_name="角色介绍")
-    avatar = models.URLField(verbose_name="立绘图片链接")
+    avatar = models.URLField(verbose_name="立绘图片链接", max_length=2000)
 
     def __str__(self):
         if self.galgame:

@@ -1,54 +1,43 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NButton, NIcon, NEmpty } from 'naive-ui'
 import { ArrowBackOutline, GameControllerOutline } from '@vicons/ionicons5'
-
+import axios from 'axios'
 const route = useRoute()
 const router = useRouter()
 
 // 获取路由参数里的品牌名 (例如 "Key", "Yuzu")
 const brandName = route.params.name
 
+console.log('当前品牌名称:', brandName)
 // 模拟的大型数据库 (实际项目中这些应该在 store/resources.js 里)
-const allGames = [
-  // Key 社
-  { id: 101, title: 'CLANNAD', developer: 'Key', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', date: '2004-04-28' },
-  { id: 102, title: 'Rewrite', developer: 'Key', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', date: '2011-06-24' },
-  { id: 103, title: 'Summer Pockets', developer: 'Key', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', date: '2018-06-29' },
-  { id: 104, title: 'anemoi', developer: 'Key', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', date: '2026-04-24' },
-  
-  // Yuzu (柚子社)
-  { id: 201, title: '千恋＊万花', developer: 'Yuzu', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', date: '2016-07-29' },
-  { id: 202, title: 'RIDDLE JOKER', developer: 'Yuzu', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', date: '2018-03-30' },
-  { id: 203, title: '天使☆騒々 RE-BOOT!', developer: 'Yuzu', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', date: '2023-04-28' },
-
-  // Saga Planets
-  { id: 301, title: 'AMBITIOUS MISSION', developer: 'Saga', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', date: '2022-05-27' },
-  { id: 302, title: '金色ラブリッチェ', developer: 'Saga', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', date: '2017-12-22' },
-
-  // Purple Software
-  { id: 401, title: 'Happymare', developer: 'Purple', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', date: '2013-02-28' },
-  
-  // AliceSoft
-  { id: 501, title: '兰斯10', developer: 'Alice', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', date: '2018-02-23' },
-
-  // Nitro+
-  { id: 601, title: '沙耶之歌', developer: 'Nitro+', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', date: '2003-12-26' },
-]
+const allGames = ref([])
 
 // 根据 URL 传进来的品牌名进行筛选
+const fetchGames = async() => {
+  try{
+    const response = await axios.get('http://127.0.0.1:8000/a/getuser/galgames/')
+    allGames.value = response.data
+  }catch (error) {
+    console.error('获取新游数据失败:', error)
+  }
+}
 const filteredGames = computed(() => {
   if (!brandName) return []
-  // 模糊匹配：只要开发商名字包含这个关键词就算 (忽略大小写)
-  return allGames.filter(g => 
-    g.developer.toLowerCase().includes(brandName.toLowerCase())
-  )
+  return allGames.value.filter(game =>{
+  const dev = game.developer ? game.developer : ''
+  const target = brandName ? brandName : '' 
+  return dev.includes(target)
+})
 })
 
 const goToDetail = (id) => {
   router.push(`/galgame/${id}`)
 }
+onMounted(() => {
+  fetchGames()
+})
 </script>
 
 <template>

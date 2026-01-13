@@ -441,16 +441,6 @@ onMounted(() => {
           <p class="text-sm text-gray-600 line-clamp-2 mb-4 leading-relaxed">
             {{ featuredGame.description }}
           </p>
-          <div class="flex items-center justify-between">
-            <div class="flex gap-1">
-               <span v-for="tag in featuredGame.tags" :key="tag" class="text-[10px] border border-gray-200 px-1 rounded text-gray-400">
-                 {{ tag }}
-               </span>
-            </div>
-            <button class="bg-hikari-pink text-white text-xs px-3 py-1.5 rounded-full hover:bg-pink-600 transition shadow-sm shadow-pink-200">
-              查看详情
-            </button>
-          </div>
         </div>
       </div>
 
