@@ -60,7 +60,7 @@ const allPosts = ref([])
 const allNews = ref([])
 const allReviews = ref([])
 
-
+//资讯和点评列表
 const fetchNewsPosts = async () => {
   try {
     const response = await axios.get('http://127.0.0.1:8000/a/getuser/posts/') 

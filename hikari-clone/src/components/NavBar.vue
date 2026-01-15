@@ -59,7 +59,7 @@ const handleSelect = (key) => {
       
       <div class="flex items-center gap-8">
         <h1 class="text-2xl font-bold text-hikari-pink cursor-pointer tracking-wider" @click="router.push('/')">
-          Hikarinagi
+          AiHikari
         </h1>
         <div class="hidden md:flex gap-6 text-gray-600 font-medium text-sm">
           <RouterLink to="/" class="hover:text-hikari-blue transition">首页</RouterLink>

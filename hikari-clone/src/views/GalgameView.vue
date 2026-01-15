@@ -26,7 +26,7 @@ const hotgame=ref([])
 const newGames = ref([])
 // 3. 右侧排行榜
 const rankingList = ref([])
-
+//获取游戏数据
 const fetchGames = async() => {
   try {
     const res = await axios.get('http://127.0.0.1:8000/a/getuser/galgames/')

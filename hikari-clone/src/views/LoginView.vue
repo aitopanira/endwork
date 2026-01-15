@@ -5,7 +5,7 @@ import { NTabs, NTabPane, NInput, NButton, NCheckbox, NIcon, useMessage } from '
 import { PersonOutline, LockClosedOutline } from '@vicons/ionicons5' // 去掉了 MailOutline
 import { useUserStore } from '../stores/user'
 import axios from 'axios'
-
+import loginBg from '@/images/login-background.png'
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
@@ -71,9 +71,7 @@ console
     message.error('两次输入的密码不一致，请检查')
     return
   }
-
   isLoading.value = true
-
   try {
     // 3. 发送注册请求 (去掉了 email)
     const res = await axios.post('http://127.0.0.1:8000/a/users/register/', {
@@ -110,17 +108,17 @@ console
 </script>
 
 <template>
-  <div 
-    class="fixed inset-0 flex items-center justify-center bg-cover bg-center"
-    style="background-image: url('https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg');"
-  >
+ <div 
+  class="fixed inset-0 flex items-center justify-center bg-cover bg-center"
+  :style="{ backgroundImage: `url(${loginBg})` }"
+>
     <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
 
     <div class="relative w-full max-w-md p-8 bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl mx-4 animate-fade-in">
       
       <div class="text-center mb-8">
         <h1 class="text-3xl font-extrabold text-hikari-pink tracking-widest drop-shadow-sm cursor-pointer" @click="router.push('/')">
-          Hikarinagi
+          AiHikari
         </h1>
         <p class="text-xs text-gray-500 mt-2 tracking-wide uppercase">ACGN 爱好者社区</p>
       </div>

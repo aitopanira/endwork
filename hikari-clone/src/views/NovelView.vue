@@ -42,10 +42,6 @@ const fetchNovels = async () => {
       summary: novel.description ? novel.description.substring(0, 50) + '...' : '暂无简介', // 截取简介
       thumbnails: novel.volumes.map(v => v.cover)
     }))
-      // 模拟一些图集 (因为后端目前没有 thumbnails 字段，先用封面代替)
-      
-
-
     // 数据获取完后，初始化推荐和轮播
     initPageData()
 
