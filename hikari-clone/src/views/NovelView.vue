@@ -15,8 +15,8 @@ const userStore = useUserStore()
 // === 1. 数据定义 ===
 const allNovels = ref([]) // 现在的全部小说列表（从后端获取）
 const loading = ref(true)
-
 // 推荐列表和分类
+const latestUpdates = ref([])
 const recommendations = ref([]) 
 const activeCategory = ref('校园') 
 const categories = ['校园', '恋爱', '战斗', '科幻', '奇幻', '异世界', '推理', '后宫', '热血', '百合', '搞笑', '催泪', '治愈', '致郁', '日常']
@@ -30,6 +30,7 @@ const fetchNovels = async () => {
   try {
     loading.value = true
     const response = await axios.get('http://127.0.0.1:8000/a/novels/')
+    const bake=response.data
     // 映射后端数据到前端格式
     allNovels.value = response.data.map(novel => ({
       id: novel.id,
@@ -44,7 +45,8 @@ const fetchNovels = async () => {
     }))
     // 数据获取完后，初始化推荐和轮播
     initPageData()
-
+    bake.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+    latestUpdates.value = bake.slice(0, 10).map(novel => ({ id: novel.id, title: novel.title }))
   } catch (error) {
     console.error('获取小说列表失败:', error)
   } finally {
@@ -114,7 +116,7 @@ const hotReviews = [
   { id: 3, title: '『转生王女与天才千金』的合理性反转', user: 'ringyuki', bg: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', views: 1594 },
 ]
 
-const latestUpdates = ['叹息的亡灵好想隐退 ~最弱...', '我们就不可成为恋人吗(※...', 'あそびのかんけい', '明晰梦是为思春期哦~', '雨森同学的深海巨苔', 'サクチシノニエ 異端の...', '一周一次买下同班同学...', '加速世界']
+
 
 const goToDetail = (id) => {
   router.push(`/novel/${id}`)
@@ -193,8 +195,8 @@ const goToDetail = (id) => {
                 </div>
               </div>
               <div class="px-3 pt-3 flex flex-col flex-grow text-center">
-                <h3 class="font-bold text-gray-800 text-xs leading-tight mb-1 line-clamp-2 h-8 group-hover:text-hikari-blue transition">{{ book.originalTitle }}</h3>
-                <p class="text-[10px] text-gray-400 truncate mb-2">{{ book.title }}</p>
+                <h3 class="font-bold text-gray-800 text-xs leading-tight mb-1 line-clamp-2 h-8 group-hover:text-hikari-blue transition">{{ book.title }}</h3>
+                <p class="text-[10px] text-gray-400 truncate mb-2">{{ book.originalTitle }}</p>
                 <div class="mt-auto border-t border-dashed border-gray-300 pt-2 w-full">
                   <span class="text-[10px] text-gray-500">{{ book.author }}</span>
                 </div>
@@ -228,8 +230,8 @@ const goToDetail = (id) => {
                 </div>
               </div>
               <div class="px-3 pt-3 flex flex-col flex-grow text-center">
-                <h3 class="font-bold text-gray-800 text-xs leading-tight mb-1 line-clamp-2 h-8 group-hover:text-hikari-blue transition">{{ book.originalTitle }}</h3>
-                <p class="text-[10px] text-gray-400 truncate mb-2">{{ book.title }}</p>
+                <h3 class="font-bold text-gray-800 text-xs leading-tight mb-1 line-clamp-2 h-8 group-hover:text-hikari-blue transition">{{ book.title }}</h3>
+                <p class="text-[10px] text-gray-400 truncate mb-2">{{ book.originalTitle }}</p>
                 <div class="mt-auto border-t border-dashed border-gray-300 pt-2 w-full">
                   <span class="text-[10px] text-gray-500">{{ book.author }}</span>
                 </div>
@@ -271,8 +273,8 @@ const goToDetail = (id) => {
                   </div>
                 </div>
                 <div class="px-3 pt-3 flex flex-col flex-grow text-center">
-                  <h3 class="font-bold text-gray-800 text-xs leading-tight mb-1 line-clamp-2 h-8 group-hover:text-hikari-blue transition">{{ book.originalTitle }}</h3>
-                  <p class="text-[10px] text-gray-400 truncate mb-2">{{ book.title }}</p>
+                  <h3 class="font-bold text-gray-800 text-xs leading-tight mb-1 line-clamp-2 h-8 group-hover:text-hikari-blue transition">{{ book.title }}</h3>
+                  <p class="text-[10px] text-gray-400 truncate mb-2">{{ book.originalTitle }}</p>
                   <div class="mt-auto border-t border-dashed border-gray-300 pt-2 w-full">
                     <span class="text-[10px] text-gray-500">{{ book.author }}</span>
                   </div>
@@ -306,8 +308,8 @@ const goToDetail = (id) => {
               <n-icon :component="ReaderOutline"/> 最新连载
             </h3>
             <ul class="space-y-3">
-              <li v-for="(item, i) in latestUpdates" :key="i" class="flex justify-between items-center text-xs group cursor-pointer">
-                <span class="text-gray-600 truncate group-hover:text-hikari-blue transition max-w-[180px]">{{ item }}</span>
+              <li v-for="(item in latestUpdates" :key="item.id" class="flex justify-between items-center text-xs group cursor-pointer" @click="goToDetail(item.id)">
+                <span class="text-gray-600 truncate group-hover:text-hikari-blue transition max-w-[180px]">{{ item.title }}</span>
                 <span class="text-gray-300 scale-90">更新</span>
               </li>
             </ul>

@@ -3,12 +3,12 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { 
   NButton, NIcon, NTag, NRate, NAvatar, NDivider, NInput, useMessage, NSpin,
-  NTabs, NTabPane 
+  NTabs, NTabPane, NEmpty 
 } from 'naive-ui'
 import { 
   BookOutline, HeartOutline, Heart, ArrowBackOutline, ShareSocialOutline, 
   EyeOutline, PersonOutline, CreateOutline, ChatbubbleOutline, Star,
-  CheckmarkCircleOutline, CheckmarkCircle, ListOutline // 引入列表图标
+  CheckmarkCircleOutline, CheckmarkCircle, ListOutline 
 } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
 import axios from 'axios'
@@ -29,10 +29,8 @@ const fetchNovelData = async () => {
     loading.value = true
     const response = await axios.get(`http://127.0.0.1:8000/a/novels/${novelId}/`)
     const data = response.data
-    const novelVolumes = [{}]
-    // 模拟卷数据 (因为后端暂时没有 Volume 表)
     
-
+    // 数据映射
     novel.value = {
       id: data.id,
       title: data.title,
@@ -47,18 +45,16 @@ const fetchNovelData = async () => {
       characters: data.characters ? data.characters.map(c => ({
         id: c.id,
         name: c.name,
-        role: c.role || '主要角色', 
         avatar: c.avatar
-        
       })) : [],
-      // 注入模拟的卷信息
-      volumes: data.volumes.map(v => ({
+      // 映射卷信息
+      volumes: data.volumes ? data.volumes.map(v => ({
         id: v.id,
         title: v.title,
-        cover: v.cover  // 暂时都用小说封面
-      }))
+        cover: v.cover || data.cover, 
+        date: v.created_at ? v.created_at.split('T')[0] : '未知日期'
+      })) : []
     }
-      console.log(novel.value.characters)
   } catch (error) {
     console.error('获取小说失败:', error)
     message.error('数据加载失败')
@@ -66,7 +62,6 @@ const fetchNovelData = async () => {
     loading.value = false
   }
 }
-
 
 // === 2. API: 获取评论 ===
 const reviews = ref([])
@@ -129,10 +124,28 @@ const scrollToComments = () => {
 
 const handleShare = () => message.success('链接已复制')
 
-// === 阅读卷 ===
+// === ✅ 阅读功能实现 ===
+
+// 1. 跳转到指定卷的阅读页面
 const handleReadVolume = (volId) => {
-  message.info(`准备开始阅读第 ${volId} 卷`)
-  // router.push(...) 
+  if (!volId) return message.warning('无法获取章节信息')
+  
+  // 匹配你的路由: { path: '/read/:id', name: 'reader' }
+  router.push({
+    name: 'reader',
+    params: { id: volId } 
+  })
+}
+
+// 2. 点击“开始阅读”大按钮（默认读取第一卷）
+const handleStartRead = () => {
+  if (novel.value && novel.value.volumes && novel.value.volumes.length > 0) {
+    // 获取第一卷的 ID
+    const firstVolId = novel.value.volumes[0].id
+    handleReadVolume(firstVolId)
+  } else {
+    message.warning('该小说暂无章节内容')
+  }
 }
 
 // === 评论提交 ===
@@ -219,7 +232,13 @@ const submitReview = async () => {
                  <template #icon><n-icon :component="CreateOutline" /></template> 写评价
               </n-button>
 
-              <n-button type="primary" color="#3b82f6" size="large" class="w-40 shadow-lg font-bold ml-auto md:ml-0">
+              <n-button 
+                type="primary" 
+                color="#3b82f6" 
+                size="large" 
+                class="w-40 shadow-lg font-bold ml-auto md:ml-0"
+                @click="handleStartRead"
+              >
                  <template #icon><n-icon :component="BookOutline" /></template> 开始阅读
               </n-button>
             </div>
@@ -253,18 +272,23 @@ const submitReview = async () => {
 
                 <n-tab-pane name="volumes" tab="发行列表">
                    <div class="p-4 min-h-[200px]">
-                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div v-if="novel.volumes.length === 0" class="flex justify-center py-10">
+                        <n-empty description="暂无卷信息" />
+                      </div>
+                      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                          <div 
                            v-for="vol in novel.volumes" 
                            :key="vol.id" 
                            @click="handleReadVolume(vol.id)"
                            class="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg cursor-pointer group transition border border-transparent hover:border-gray-100"
                          >
-                           <div class="w-12 h-16 rounded overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm">
+                           <div class="w-12 h-16 rounded overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm relative">
                              <img :src="vol.cover" class="w-full h-full object-cover">
                            </div>
                            <div>
-                             <h4 class="font-bold text-sm text-gray-700 group-hover:text-blue-500 transition mb-1">{{ vol.title }}</h4>
+                             <h4 class="font-bold text-sm text-gray-700 group-hover:text-blue-500 transition mb-1">
+                               {{ vol.title }}
+                             </h4>
                              <span class="text-xs text-gray-400 flex items-center gap-1">
                                <n-icon :component="BookOutline" /> {{ vol.date }}
                              </span>
@@ -276,7 +300,9 @@ const submitReview = async () => {
 
                 <n-tab-pane name="chars" tab="登场人物">
                    <div class="p-4 min-h-[200px]">
-                      <div v-if="novel.characters.length === 0" class="text-center text-gray-400 py-10">暂无角色信息</div>
+                      <div v-if="novel.characters.length === 0" class="flex justify-center py-10">
+                         <n-empty description="暂无角色信息" />
+                      </div>
                       <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                          <div v-for="char in novel.characters" :key="char.id" class="flex flex-col items-center group cursor-pointer">
                             <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-sm group-hover:shadow-md group-hover:scale-105 transition duration-300 relative bg-gray-100">
@@ -343,6 +369,10 @@ const submitReview = async () => {
                    </div>
                    <p class="text-gray-600 text-sm mt-2 leading-relaxed bg-gray-50 p-3 rounded-lg">{{ review.content }}</p>
                  </div>
+               </div>
+               
+               <div v-if="reviews.length === 0" class="text-center py-8">
+                 <n-empty description="暂无评论，快来抢沙发吧！" />
                </div>
              </div>
           </div>

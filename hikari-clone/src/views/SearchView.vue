@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, initCustomFormatter } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   NInput, NButton, NIcon, NSpin, NPagination, useMessage
@@ -70,7 +70,6 @@ const performSearch = async () => {
         item.summary,                // 摘要 (Post)
         // item.tags?.join(' ')      // 如果你有标签数组，也可以加上
       ].filter(Boolean).join(' ').toLowerCase() // filter(Boolean) 去掉 undefined/null
-
       // 检查是否所有关键词都在这个范围内
       return keywords.every(k => searchScope.includes(k))
     })
@@ -114,11 +113,17 @@ const fetchAllData = async () => {
     const novels = (novelRes.data || []).map(item => ({
       ...item,
       type: 'novel',
+      // 1. 让主标题 (title) 显示原名 (original_title)
+      //    (如果原名为空，则回退显示中文名，防止空白)
+      title: item.original_title || item.title, 
+      // 2. 让副标题/原名 (original_title) 显示中文名 (title)
+      original_title: item.title,
+
       cover: processCover(item.cover),
       score: item.score_avg || item.score || 0,
       date: item.release_date
     }))
-
+console.log('Fetched novels:', novels);
     // 处理 Post 数据
     const posts = (postRes.data || []).map(item => ({
       ...item,
@@ -233,7 +238,7 @@ const goToDetail = (item) => {
               </div>
 
               <h3 class="mt-3 text-sm text-gray-700 font-medium truncate group-hover:text-[#fb7299] transition text-center px-1">
-                {{ item.title }}
+                {{ item.original_title || item.title }}
               </h3>
             </div>
           </div>

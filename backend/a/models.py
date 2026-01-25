@@ -67,6 +67,7 @@ class Novel(models.Model):
 class NovelVolume(models.Model):
     novel = models.ForeignKey(Novel, on_delete=models.CASCADE, related_name='volumes', verbose_name="所属小说")
     title = models.CharField(max_length=200, verbose_name="卷名") 
+    file_url = models.URLField(max_length=5000, blank=True, null=True, verbose_name="卷链接")
     cover = models.URLField(max_length=1000, blank=True, null=True, verbose_name="本卷封面")
     release_date = models.DateField(blank=True, null=True, verbose_name="发售日")
 

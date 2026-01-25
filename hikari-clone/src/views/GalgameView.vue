@@ -44,15 +44,15 @@ const fetchGames = async() => {
 
 // 4. 品牌合作 (Logos)
 const brands = [
-  { name: 'Key', color: 'bg-blue-100 text-blue-500' },
-  { name: 'ゆずソフト', color: 'bg-yellow-100 text-yellow-600' },
-  { name: 'CRYSTALiA', color: 'bg-purple-100 text-purple-500' },
-  { name: '枕', color: 'bg-red-100 text-red-500' },
-  { name: 'あざらし', color: 'bg-gray-800 text-white' },
-  { name: 'HIKARI', color: 'bg-yellow-100 text-yellow-600' },
-  { name: 'sprite', color: 'bg-purple-100 text-purple-500' },
-  { name: 'NEKO', color: 'bg-yellow-100 text-yellow-600' },
-  { name: 'MAGES', color: 'bg-pink-100 text-pink-500' },
+  { name: 'Key社', color: 'bg-blue-100 text-blue-500', value: 'Key' },
+  { name: '柚子社', color: 'bg-yellow-100 text-yellow-600', value: 'ゆずソフト' },
+  { name: 'CRYSTALiA', color: 'bg-purple-100 text-purple-500', value: 'CRYSTALiA' },
+  { name: '枕社', color: 'bg-red-100 text-red-500', value: '枕' },
+  { name: '海豹社', color: 'bg-gray-800 text-white', value: 'あざらし' },
+  { name: 'HIKARI', color: 'bg-yellow-100 text-yellow-600', value: 'HIKARI' },
+  { name: 'sprite', color: 'bg-purple-100 text-purple-500', value: 'sprite' },
+  { name: 'NEKO', color: 'bg-yellow-100 text-yellow-600', value: 'NEKO' },
+  { name: 'MAGES', color: 'bg-pink-100 text-pink-500', value: 'MAGES' },
 ]
 
 // 5. 热门点评
@@ -142,7 +142,7 @@ onMounted(() => {
               
               </div>
               <h3 class="font-bold text-gray-700 text-sm truncate group-hover:text-hikari-blue transition">
-                {{ game.title || game.name }} 
+                {{ game.original_title || game.title }} 
               </h3>
             </div>
           </div>
@@ -170,7 +170,7 @@ onMounted(() => {
               <div class="w-32 h-32 rounded-lg overflow-hidden mb-2 shadow-sm border border-gray-100">
                 <img :src="game.cover" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
               </div>
-              <div class="text-xs font-bold text-gray-700 text-center truncate">{{ game.title }}</div>
+              <div class="text-xs font-bold text-gray-700 text-center truncate">{{ game.original_title }}</div>
             </div>
           </div>
         </section>
@@ -183,8 +183,8 @@ onMounted(() => {
   <div class="flex flex-wrap justify-between gap-4">
   <div 
     v-for="brand in brands" 
-    :key="brand.name" 
-    @click="goToBrand(brand.name)"
+    :key="brand.value" 
+    @click="goToBrand(brand.value)"
     class="flex flex-col items-center gap-2 cursor-pointer group"
   >
     <div :class="`w-20 h-20 rounded-full flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-110 transition ${brand.color}`">

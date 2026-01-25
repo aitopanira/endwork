@@ -77,7 +77,7 @@ onMounted(() => {
               {{ game.developer }}
             </div>
           </div>
-          <h3 class="font-bold text-gray-700 text-sm truncate group-hover:text-hikari-blue transition mb-1">{{ game.title }}</h3>
+          <h3 class="font-bold text-gray-700 text-sm truncate group-hover:text-hikari-blue transition mb-1">{{ game.original_title }}</h3>
           <div class="text-xs text-gray-400 flex items-center gap-1">
              <n-icon :component="GameControllerOutline" /> {{ game.date }}
           </div>
