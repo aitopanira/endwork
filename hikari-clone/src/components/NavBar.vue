@@ -65,11 +65,11 @@ const handleSelect = (key) => {
           <RouterLink to="/" class="hover:text-hikari-blue transition">首页</RouterLink>
           <RouterLink to="/galgame" class="hover:text-hikari-blue transition">Galgame</RouterLink>
            <RouterLink to="/novel" class="hover:text-hikari-blue transition">轻小说</RouterLink>
+           <RouterLink to="/music" class="hover:text-hikari-blue transition">音乐</RouterLink>
         </div>
       </div>
 
       <div class="flex items-center gap-4">
-        
         <n-button square quaternary size="large" @click="router.push('/search')">
           <template #icon>
             <n-icon :component="Search" color="#fb7299" />

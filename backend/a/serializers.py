@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import UserInfo, Tag, Galgame, Novel, Post, Review, UserCollection, GalgameCg,Character,NovelVolume
+from .models import UserInfo, Tag, Galgame, Novel, Post, Review, UserCollection, GalgameCg,Character,NovelVolume, ReadingProgress,MusicPlayer
 
 # 1. 基础 Tag 序列化器
 class TagSerializer(serializers.ModelSerializer):
@@ -43,7 +43,7 @@ class GalgameSerializer(serializers.ModelSerializer):
 class NovelVolumeSerializer(serializers.ModelSerializer):
     class Meta:
         model = NovelVolume
-        fields = ['id', 'title', 'cover', 'release_date']
+        fields = ['id', 'title', 'cover', 'release_date','file_url']
 # 5. 小说序列化器
 class NovelSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
@@ -82,4 +82,25 @@ class UserCollectionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = UserCollection
+        fields = '__all__'
+
+
+
+class ReadingProgressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReadingProgress
+        fields = ['id', 'user', 'volume', 'cfi', 'updated_at']
+        read_only_fields = ['user', 'updated_at'] 
+        # user 字段是只读的，因为我们会从 request.user (或者你的自定义认证) 中获取并自动赋值
+
+class MusicPlayerSerializer(serializers.ModelSerializer):
+    # 1. 改名映射：把 singer 映射给 artist
+    artist = serializers.CharField(source='singer', read_only=True)
+    # 2. 改名映射：把 music_urls 映射给 url
+    url = serializers.CharField(source='music_urls', read_only=True)
+    # 3. 封面：因为我们要前端自己解析，所以这里不用返回 cover 字段，或者返回个空
+    # 前端 store 代码里发现没有 cover 会自动去解析的
+    class Meta:
+        model = MusicPlayer
+        # 返回给前端的字段列表
         fields = '__all__'

@@ -14,7 +14,7 @@ import ReaderView from '@/views/ReaderView.vue'
 import CreatorCenterView from '@/views/CreatorCenterView.vue'
 import UserLibraryView from '@/views/UserLibraryView.vue'
 import SearchView from '@/views/SearchView.vue'
-
+import   MusicPlayerView from   '@/views/MusicPlayerView.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -69,7 +69,12 @@ const router = createRouter({
       path: '/read/:id',
       name: 'reader',
       component: ReaderView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
+      // ✅ 关键：把 URL 和 Title 作为 props 传给组件
+      props: route => ({ 
+            id: route.params.id,
+            url: route.query.url, 
+            title: route.query.title })
     },
     {
       path: '/creator',
@@ -87,6 +92,11 @@ const router = createRouter({
       path: '/search',
       name: 'search',
       component: SearchView
+    },
+    {
+      path: '/music',
+      name: 'music',
+      component: MusicPlayerView
     }
   ],
 })

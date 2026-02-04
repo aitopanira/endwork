@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -51,7 +52,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+   
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -143,3 +144,29 @@ R2_SECRET_ACCESS_KEY = '93957a4e48776dc3c30ddb50ed7babc8db05c695c177915ea24f19c6
 R2_ENDPOINT_URL = 'https://1667ccbfbaa13fc1546b6f415164f667.r2.cloudflarestorage.com'
 R2_BUCKET_NAME = 'my-gal-images' # 你的桶名字
 R2_PUBLIC_DOMAIN = 'https://pub-31746bf4167d45c09c44a61e59e55416.r2.dev' # 你的公开访问前缀
+
+# 1. 允许的前端域名 (必须精准，不能用 *)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# 2. 允许携带 Cookie (关键！配合前端的 withCredentials: true)
+CORS_ALLOW_CREDENTIALS = True
+
+# 3. 必须显式关闭 Allow All (因为开启了 Credentials)
+CORS_ALLOW_ALL_ORIGINS = False
+
+# 4. CSRF 信任源 (Django 4.0+ 必须配置这个，否则 POST 会报 403)
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# 5. 允许前端读取的 Cookies
+CORS_ExPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+# 允许携带的 Headers
+from corsheaders.defaults import default_headers
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-csrftoken',
+]

@@ -52,10 +52,13 @@ const fetchNovelData = async () => {
         id: v.id,
         title: v.title,
         cover: v.cover || data.cover, 
-        date: v.created_at ? v.created_at.split('T')[0] : '未知日期'
+        date: v.created_at ? v.created_at.split('T')[0] : '未知日期',
+        file_url: v.file_url,
       })) : []
+    
     }
-  } catch (error) {
+  } 
+  catch (error) {
     console.error('获取小说失败:', error)
     message.error('数据加载失败')
   } finally {
@@ -127,16 +130,35 @@ const handleShare = () => message.success('链接已复制')
 // === ✅ 阅读功能实现 ===
 
 // 1. 跳转到指定卷的阅读页面
+// 跳转到指定卷的阅读页面
 const handleReadVolume = (volId) => {
   if (!volId) return message.warning('无法获取章节信息')
   
-  // 匹配你的路由: { path: '/read/:id', name: 'reader' }
+  // 1. 先在当前数据里找到这一卷，为了拿到它的 file_url
+  const targetVol = novel.value.volumes.find(v => v.id === volId)
+  
+  if (!targetVol) {
+    message.error('未找到章节信息')
+    return
+  }
+
+  // 2. 检查有没有链接
+  if (!targetVol.file_url) {
+    message.warning('该章节暂无文件资源，请联系管理员上传')
+    return
+  }
+  
+  // 3. 带参数跳转！
   router.push({
-    name: 'reader',
-    params: { id: volId } 
+    name: 'reader',       // 对应路由里的 name
+    params: { id: volId }, // 对应 path: '/read/:id'
+    query: { 
+      // 👇 这就是 ReaderView 里 props.url 等不到的那个值！
+      url: targetVol.file_url, 
+      title: targetVol.title 
+    } 
   })
 }
-
 // 2. 点击“开始阅读”大按钮（默认读取第一卷）
 const handleStartRead = () => {
   if (novel.value && novel.value.volumes && novel.value.volumes.length > 0) {

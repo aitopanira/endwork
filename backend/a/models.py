@@ -187,3 +187,32 @@ class Character(models.Model):
         elif self.novel:
             return f"[Novel] {self.novel.title} - {self.name}"
         return self.name
+    
+# 9. 书签/阅读进度表
+class ReadingProgress(models.Model):
+    # 👇 关键修改：把 User 改为 UserInfo，与你系统其他部分保持一致
+    user = models.ForeignKey(UserInfo, on_delete=models.CASCADE, related_name='progress')
+    
+    volume = models.ForeignKey(NovelVolume, on_delete=models.CASCADE, related_name='progress_records')
+    cfi = models.CharField(max_length=255, help_text="epub.js 的定位字符串")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'volume')
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        # 👇 关键修改：UserInfo 表里字段叫 name，不叫 username
+        return f"{self.user.name} - {self.volume.title}"
+    # 音乐播放器
+class MusicPlayer(models.Model):
+    title=models.CharField(max_length=100, verbose_name="歌名")
+    singer = models.CharField(max_length=100,  verbose_name="歌手")
+    album =models.CharField(max_length=100, blank=True, verbose_name="专辑")
+    music_urls=models.URLField(verbose_name="音频链接", max_length=2000)
+    duration =models.IntegerField(default=0, verbose_name="时长")
+    def __str__(self):
+        return self.title
+    class Meta:
+        verbose_name = "音乐库"
+        verbose_name_plural = verbose_name

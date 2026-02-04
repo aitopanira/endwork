@@ -1,12 +1,14 @@
-from rest_framework import viewsets
+from rest_framework import viewsets,status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 # 1. 引入所有模型
-from .models import UserInfo, Galgame, Novel, Post, Review, UserCollection, Tag
+from .models import UserInfo, Galgame, Novel, Post, Review, UserCollection, Tag,ReadingProgress,MusicPlayer
 # 2. 引入所有序列化器
 from .serializers import (
     UserInfoSerializer, GalgameSerializer, NovelSerializer, 
-    PostSerializer, ReviewSerializer, UserCollectionSerializer, TagSerializer
+    PostSerializer, ReviewSerializer, UserCollectionSerializer, TagSerializer,
+    ReadingProgressSerializer,MusicPlayerSerializer
 )
 import random
 
@@ -123,3 +125,82 @@ class UserCollectionViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(user_id=user_id)
         return queryset
 
+
+class ReadingProgressViewSet(viewsets.ModelViewSet):
+
+    queryset = ReadingProgress.objects.all()
+    serializer_class = ReadingProgressSerializer
+    # 确保只有登录用户能访问
+    permission_classes = [IsAuthenticated] 
+
+    # 辅助函数：获取当前登录用户的 UserInfo 实例
+    def get_user_info(self):
+        # 假设你的 UserInfo 和 Django 的 User 是通过 username/name 或者 ID 关联的
+        # 这里需要根据你实际的登录逻辑调整。
+        # 如果你的 request.user 就是 UserInfo (自定义Auth)，直接用 request.user
+        # 如果 request.user 是 django User，我们需要查 UserInfo
+        try:
+            # 方案A: 如果两者名字一样
+            return UserInfo.objects.get(name=self.request.user.username)
+        except UserInfo.DoesNotExist:
+            # 方案B: 如果没关联，暂时为了跑通，我们返回第一个用户或者报错
+            # ⚠️ 实际项目中，你需要确保 request.user 能找到对应的 UserInfo
+            return UserInfo.objects.first() 
+
+    # 1. 同步进度 (POST /a/progress/sync/)
+    @action(detail=False, methods=['post'])
+    def sync(self, request):
+        volume_id = request.data.get('volume_id')
+        cfi = request.data.get('cfi')
+        
+        # 这一步是为了获取你在 UserInfo 表里的用户对象
+        # 前端 userStore 应该存了 user_id，你也可以从前端传 user_id 过来
+        # 这里为了简单，我们假设前端传了 user_id
+        user_id = request.data.get('user_id') 
+        
+        if not user_id:
+            # 如果没传，尝试从登录态获取 (见上面的 get_user_info)
+            user_info = self.get_user_info()
+        else:
+            user_info = UserInfo.objects.get(id=user_id)
+
+        if not volume_id or not cfi:
+            return Response({'error': '缺少参数'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 更新或创建进度
+        progress, created = ReadingProgress.objects.update_or_create(
+            user=user_info,
+            volume_id=volume_id,
+            defaults={'cfi': cfi}
+        )
+        
+        return Response({
+            'status': 'success', 
+            'cfi': progress.cfi,
+            'updated_at': progress.updated_at
+        })
+
+    # 2. 查询进度 (GET /a/progress/query/?volume_id=1&user_id=1)
+    @action(detail=False, methods=['get'])
+    def query(self, request):
+        volume_id = request.query_params.get('volume_id')
+        user_id = request.query_params.get('user_id') # 前端记得传
+
+        if not user_id:
+             user_info = self.get_user_info()
+        else:
+             try:
+                user_info = UserInfo.objects.get(id=user_id)
+             except UserInfo.DoesNotExist:
+                return Response({'cfi': None})
+
+        try:
+            progress = ReadingProgress.objects.get(user=user_info, volume_id=volume_id)
+            return Response({'cfi': progress.cfi})
+        except ReadingProgress.DoesNotExist:
+            return Response({'cfi': None}) # 没读过，返回空
+# === 标签视图 (之前报错缺失的部分) ===
+
+class MusicViewSet(viewsets.ModelViewSet):
+    queryset = MusicPlayer.objects.all()
+    serializer_class = MusicPlayerSerializer

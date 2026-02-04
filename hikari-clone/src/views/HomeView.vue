@@ -163,6 +163,7 @@ const fetchFeaturedGame = async () => {
       featuredGame.value = {
         id: bestGame.id,
         title: bestGame.title,
+        orginal_title: bestGame.orginal_title,
         brand: bestGame.developer || '未知厂商',
         date: bestGame.release_date || '未知日期',
         score: bestGame.score_avg || 0.0,
@@ -248,7 +249,7 @@ onMounted(() => {
 
             <div>
                <h3 class="font-bold text-gray-800 text-sm truncate w-full group-hover:text-hikari-blue transition">
-                 {{ item.title }}
+                 {{ item.orginal_title || item.title }}
                </h3>
                
                <div class="flex justify-between items-center text-[10px] text-gray-400 mt-1">
