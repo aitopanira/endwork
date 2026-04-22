@@ -1,34 +1,28 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import axios from 'axios' // 1. 引入 axios
+import axios from 'axios'
 
 export const useUserStore = defineStore('user', () => {
   
-  // === 1. 初始化逻辑 (新增：防呆处理) ===
-  // 专门处理“刷新页面”时的数据读取，防止旧数据缺少字段导致报错
+  // === 1. 初始化逻辑 ===
   const loadUserFromStorage = () => {
     try {
       const stored = JSON.parse(localStorage.getItem('user'))
       if (!stored) return null
 
-      // 补全可能缺失的字段 (兼容旧数据)
-      // 1. 补全等级
       if (stored.level === undefined) stored.level = 1
-      
-      // 2. 补全下一级经验 (如果缺失，按公式反推)
       if (!stored.nextLevelExp) {
         stored.nextLevelExp = Math.floor(100 * Math.pow(1.2, stored.level - 1))
       }
-      
-      // 3. 兼容 exp 和 currentExp
       if (stored.currentExp === undefined) {
         stored.currentExp = stored.exp || 0
       }
-
-      // 4. 兼容下划线写法
       if (stored.isSignedToday === undefined) {
         stored.isSignedToday = stored.is_signed_today || false
       }
+
+      // 每次刷新页面时，检查是不是新的一天
+      checkAndResetDailyStatus(stored)
 
       return stored
     } catch (e) {
@@ -37,47 +31,63 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  // === 💡 核心升级：基于“用户专属签到日期”的重置逻辑 ===
+  const checkAndResetDailyStatus = async (userObj) => {
+    if (!userObj || !userObj.id) return
+    
+    const today = new Date().toLocaleDateString()
+    // 获取该用户最后一次【真实点击签到】的日期
+    const lastSignDate = localStorage.getItem(`lastSignDate_${userObj.id}`)
+
+    // 只要本地记录的最后签到日期不是今天（或者根本没签过到）
+    if (lastSignDate !== today) {
+      // 1. 强制无视后端的旧数据，今天就是没签到！
+      userObj.isSignedToday = false
+      localStorage.setItem('user', JSON.stringify(userObj))
+      
+      if (userInfo.value) {
+        userInfo.value.isSignedToday = false
+      }
+
+      // 2. 顺手发个请求，把数据库里昨天的 1 擦掉，改成 0
+      try {
+        await axios.patch(`http://127.0.0.1:8000/a/users/${userObj.id}/`, {
+          is_signed_today: false
+        })
+      } catch (error) {
+        // 静默失败，不影响前端展示
+      }
+    }
+  }
+
   // === 2. 核心状态 ===
-  const userInfo = ref(loadUserFromStorage()) // 使用增强版的读取函数
+  const userInfo = ref(loadUserFromStorage())
   const token = ref(localStorage.getItem('token') || '')
 
   // === 3. 用户资源库数据 ===
-  const galgameLibrary = ref({
-    wish: [],    
-    playing: [], 
-    played: []   
-  })
-
-  const novelLibrary = ref({
-    favorites: [],
-    read: []      
-  })
-
+  const galgameLibrary = ref({ wish: [], playing: [], played: [] })
+  const novelLibrary = ref({ favorites: [], read: [] })
   const articleLibrary = ref([])
 
   // === 4. 动作：登录 ===
   const login = (data) => {
-    // 兼容逻辑：后端可能返回 { status: 'success', user: {...}, token: '...' }
-    // 也可能直接返回 user 对象
     const rawUser = data.user || data
     
-    // ⚠️ 关键修正：后端字段 -> 前端字段映射
     const mappedUser = {
       ...rawUser,
-      // 如果后端有 exp 字段，映射为 currentExp；否则默认为 0
       currentExp: rawUser.exp !== undefined ? rawUser.exp : (rawUser.currentExp || 0),
-      // 如果后端有 is_signed_today，映射为 isSignedToday
       isSignedToday: rawUser.is_signed_today !== undefined ? rawUser.is_signed_today : false,
-      // 初始化下一级所需经验 (如果没存过，默认 100，按 1.2 倍递增)
       nextLevelExp: rawUser.nextLevelExp || Math.floor(100 * Math.pow(1.2, (rawUser.level || 1) - 1))
     }
 
     userInfo.value = mappedUser
-    token.value = data.token || 'mock-token-xyz' // 防止后端没发 token 导致报错
+    token.value = data.token || 'mock-token-xyz'
 
-    // 持久化存储
     localStorage.setItem('user', JSON.stringify(userInfo.value))
     localStorage.setItem('token', token.value)
+
+    // 每次登录时，检查是不是新的一天
+    checkAndResetDailyStatus(userInfo.value)
   }
 
   // === 5. 动作：退出登录 ===
@@ -87,26 +97,21 @@ export const useUserStore = defineStore('user', () => {
     
     localStorage.removeItem('user')
     localStorage.removeItem('token')
-    localStorage.removeItem('lastSignDate')
   }
 
-  // === 6. 辅助函数 ===
   const isLoggedIn = () => {
     return !!token.value
   }
 
-  // === 7. 动作：签到 (核心修改：连接后端) ===
+  // === 7. 动作：签到 ===
   const signIn = async () => {
-    // 1. 检查是否登录
     if (!userInfo.value) return { success: false, msg: '请先登录' }
     
-    // 前端先做个简单判断，避免重复请求（后端也会再校验一次）
     if (userInfo.value.isSignedToday) {
       return { success: false, msg: '今天已经签到过了哦~' }
     }
 
     try {
-      // 2. 发送请求给后端 (请确保端口号正确)
       const res = await axios.post('http://127.0.0.1:8000/a/users/sign_in/', {
         user_id: userInfo.value.id
       })
@@ -114,26 +119,24 @@ export const useUserStore = defineStore('user', () => {
       const data = res.data
       
       if (data.status === 'success') {
-        // 3. 后端处理成功，直接用后端返回的最新 user 数据覆盖前端的
         const rawUser = data.user
         
-        // 重新做一次字段映射 (保持和 login 里一样的逻辑)
-        // 这样前端显示的等级、经验就自动同步了
         userInfo.value = {
             ...rawUser,
-            currentExp: rawUser.exp, // 后端通常返回 exp
-            isSignedToday: true,     // 既然成功了，那就是签了
-            level: rawUser.level,
-            // 算出下一级经验用于显示进度条
-            nextLevelExp: Math.floor(100 * Math.pow(1.2, (rawUser.level - 1)))
+            currentExp: rawUser.exp !== undefined ? rawUser.exp : (rawUser.currentExp || 0),
+            isSignedToday: true, 
+            level: rawUser.level || 1,
+            nextLevelExp: Math.floor(100 * Math.pow(1.2, ((rawUser.level || 1) - 1)))
         }
         
-        // 更新本地存储
         localStorage.setItem('user', JSON.stringify(userInfo.value))
+        
+        // 💡 核心升级：签到成功后，给这个用户盖上“今天已签到”的时间戳印章！
+        const today = new Date().toLocaleDateString()
+        localStorage.setItem(`lastSignDate_${userInfo.value.id}`, today)
         
         return { success: true, msg: data.msg }
       } else {
-        // 后端返回 warning (比如“已签到”)
         return { success: false, msg: data.msg }
       }
 
@@ -151,7 +154,7 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // === 9. 资源库管理逻辑 (保持原样) ===
+  // === 9. 资源库管理逻辑 ===
   const setGalgameStatus = (game, status) => {
     ['wish', 'playing', 'played'].forEach(key => {
       const index = galgameLibrary.value[key].findIndex(g => g.id === game.id)
@@ -230,7 +233,7 @@ export const useUserStore = defineStore('user', () => {
     logout, 
     register, 
     updateProfile, 
-    signIn, // 导出新的 signIn
+    signIn,
     galgameLibrary, 
     setGalgameStatus,
     novelLibrary, 

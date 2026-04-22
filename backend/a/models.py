@@ -7,6 +7,7 @@ class UserInfo(models.Model):
     # 注意：生产环境强烈建议改为继承 AbstractUser，这里保留原样以防破坏你现有的登录逻辑
     password = models.CharField(max_length=100)  
     avatar = models.URLField(default='https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', verbose_name="头像")
+    gender = models.CharField(max_length=20, default='保密', verbose_name="性别")
     bio = models.TextField(blank=True, default='这个人很懒，什么都没有写~', verbose_name="个性签名")
     level = models.IntegerField(default=1, verbose_name="等级")
     exp = models.IntegerField(default=0, verbose_name="经验值")
@@ -89,7 +90,7 @@ class Post(models.Model):
     title = models.CharField(max_length=200, verbose_name="标题")
     summary = models.TextField(max_length=500, verbose_name="摘要", help_text="用于首页显示的简短介绍")
     content = models.TextField(verbose_name="正文内容") # 建议前端使用富文本编辑器
-    cover = models.URLField(null=True, blank=True, verbose_name="封面图",max_length=1000)
+    cover = models.CharField(max_length=500, null=True, blank=True, verbose_name="封面图")
     
     # 修改了这里：默认分类改为 news，且选项不再包含“闲聊”
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='news', verbose_name="资讯分类")

@@ -51,8 +51,23 @@ const handleSignIn = async () => {
 
 // 轮播图数据
 const banners = [
-  'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
-  'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg',
+  
+    {
+    url: 'https://lunbo.aihikari.xyz/%E8%BD%AE%E6%92%AD%E5%9B%BE/a2.avif',
+    title: 'anemoi アネモイ',
+    desc: 'key社新作 anemoi 2026年4月26日发售'
+  },
+  { 
+    url: 'https://lunbo.aihikari.xyz/%E8%BD%AE%E6%92%AD%E5%9B%BE/a0.avif',
+    title: '【Gal周报239期】Baseson宣布制作新作，"Key Live 2026"将于香港举办',
+    desc: '本周，Baseson宣布制作新作《戦国†恋姫BRAVE弐 ～戦乱の九州、島津編～》并公开了官网，与其一同公开的还有故事背景，人物介绍，店铺特典等。'
+  },
+  { 
+    url:  'https://lunbo.aihikari.xyz/%E8%BD%AE%E6%92%AD%E5%9B%BE/a1avif.avif',
+    title: '流星 世界演绎者 最新作&最终章 情报解禁',
+    desc: '发售日：2026年2月27日企划开始'
+  },
+  
 ]
 
 // === 👇 修改点：填充测试用的假数据，用于测试跳转功能 ===
@@ -97,6 +112,7 @@ const fetchGalgameReviews = async () => {
           .map(game => ({
             id: game.id,
             title: game.title,
+            orginal_title: game.original_title,
             cover: game.cover,
             score: game.score_avg || game.score || 0.0, 
             comment: game.comment,
@@ -104,7 +120,9 @@ const fetchGalgameReviews = async () => {
             time: game.time,
             status: game.status
           }))
+         
     }
+     
   } catch (error) {
     console.error('获取Galgame评分失败:', error)
   }
@@ -163,7 +181,7 @@ const fetchFeaturedGame = async () => {
       featuredGame.value = {
         id: bestGame.id,
         title: bestGame.title,
-        orginal_title: bestGame.orginal_title,
+        orginal_title: bestGame.original_title,
         brand: bestGame.developer || '未知厂商',
         date: bestGame.release_date || '未知日期',
         score: bestGame.score_avg || 0.0,
@@ -198,9 +216,21 @@ onMounted(() => {
     
     <div class="lg:col-span-3 space-y-10">
       
-      <n-carousel autoplay show-arrow class="rounded-lg shadow-sm overflow-hidden h-48 sm:h-80">
-        <img v-for="url in banners" :key="url" :src="url" class="w-full h-full object-cover">
-      </n-carousel>
+  <n-carousel interval="2000" autoplay show-arrow class="rounded-lg shadow-sm overflow-hidden h-48 sm:h-80">
+  
+  <div v-for="(lunbo, index) in banners" :key="index" class="w-full h-full relative group cursor-pointer">
+    
+    <img :src="lunbo.url" class="w-full h-full object-cover">
+    
+    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 sm:p-6 text-white flex flex-col justify-end">
+      <h1 class="font-bold text-lg sm:text-2xl text-shadow mb-1">{{ lunbo.title }}</h1>
+      <p class="text-xs sm:text-sm text-gray-200 line-clamp-1">{{ lunbo.desc }}</p>
+    </div>
+    
+  </div>
+  
+</n-carousel>
+      
 
       <section>
         <div class="flex items-center justify-between mb-4">
@@ -249,7 +279,7 @@ onMounted(() => {
 
             <div>
                <h3 class="font-bold text-gray-800 text-sm truncate w-full group-hover:text-hikari-blue transition">
-                 {{ item.orginal_title || item.title }}
+                 {{ item.orginal_title||item.title }}
                </h3>
                
                <div class="flex justify-between items-center text-[10px] text-gray-400 mt-1">
@@ -380,7 +410,7 @@ onMounted(() => {
         </div>
 
         <div class="grid grid-cols-3 gap-2 text-center mb-5 border-t border-gray-50 pt-4">
-          <div class="cursor-pointer hover:bg-gray-50 rounded py-1 transition">
+          <!-- <div class="cursor-pointer hover:bg-gray-50 rounded py-1 transition">
             <span class="block font-bold text-gray-700 text-sm">0</span>
             <span class="text-xs text-gray-400">动态</span>
           </div>
@@ -391,7 +421,7 @@ onMounted(() => {
           <div class="cursor-pointer hover:bg-gray-50 rounded py-1 transition">
             <span class="block font-bold text-gray-700 text-sm">{{ userStore.userInfo.currentExp }}</span>
             <span class="text-xs text-gray-400">经验</span>
-          </div>
+          </div> -->
         </div>
 
         <button 
@@ -429,7 +459,7 @@ onMounted(() => {
             <span class="text-[10px] text-gray-400">评分</span>
           </div>
           <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
-             <h4 class="text-white font-bold text-lg shadow-sm truncate w-full">{{ featuredGame.title }}</h4>
+             <h4 class="text-white font-bold text-lg shadow-sm truncate w-full">{{ featuredGame.orginal_title }}</h4>
           </div>
         </div>
         <div class="p-4">

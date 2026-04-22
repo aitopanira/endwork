@@ -11,7 +11,7 @@ class TagSerializer(serializers.ModelSerializer):
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserInfo
-        fields = ['id', 'name', 'avatar', 'bio', 'level', 'exp', 'is_signed_today']
+        fields = ['id', 'name', 'avatar','gender', 'bio', 'level', 'exp', 'is_signed_today']
         # 密码只写不读，保护安全
         extra_kwargs = {'password': {'write_only': True}}
 
@@ -104,3 +104,47 @@ class MusicPlayerSerializer(serializers.ModelSerializer):
         model = MusicPlayer
         # 返回给前端的字段列表
         fields = '__all__'
+
+
+from rest_framework import serializers
+from .models import UserCollection, Galgame
+
+class GalgameSimpleSerializer(serializers.ModelSerializer):
+    """用于收藏列表中显示的基础信息"""
+    class Meta:
+        model = Galgame
+        fields = ['id', 'title', 'cover']
+
+
+# 8. 收藏序列化器 (已升级，支持动态获取目标详情)
+class UserCollectionSerializer(serializers.ModelSerializer):
+    user = UserInfoSerializer(read_only=True)
+    # 新增：动态字段，用于挂载对应的实体详情
+    target_data = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta:
+        model = UserCollection
+        fields = '__all__'
+
+    def get_target_data(self, obj):
+        if obj.target_type == 'galgame':
+            game = Galgame.objects.filter(id=obj.target_id).first()
+            if game:
+                return {"title": game.title, "cover": game.cover, "dev": game.developer}
+        elif obj.target_type == 'novel':
+            novel = Novel.objects.filter(id=obj.target_id).first()
+            if novel:
+                return {"title": novel.title, "cover": novel.cover, "author": novel.author}
+        elif obj.target_type == 'post':
+            post = Post.objects.filter(id=obj.target_id).first()
+            if post:
+                return {
+                    "title": post.title, 
+                    "summary": post.summary, 
+                    "author": post.author.name if post.author else "佚名", 
+                    "time": post.created_at.strftime('%Y-%m-%d'), 
+                    "avatar": post.author.avatar if post.author else "",
+                    # 👇 新增这一行，把封面发给前端
+                    "cover": post.cover 
+                }
+        return None

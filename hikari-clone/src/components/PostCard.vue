@@ -51,12 +51,12 @@ const goToDetail = () => {
       
       <div class="flex items-center justify-between text-xs text-gray-400 mt-2">
         <div class="flex items-center gap-3">
-          <span>👤 {{ post.author }}</span>
-          <span>📅 {{ post.date }}</span>
+          <!-- <span>👤 {{ post.author }}</span> -->
+          <!-- <span> {{ post.date }}</span> -->
         </div>
         <div class="flex gap-3">
-          <span>🔥 {{ post.views }}</span>
-          <span>💬 {{ post.comments }}</span>
+          <!-- <span>🔥 {{ post.views }}</span> -->
+          <!-- <span>💬 {{ post.comments }}</span> -->
         </div>
       </div>
     </div>

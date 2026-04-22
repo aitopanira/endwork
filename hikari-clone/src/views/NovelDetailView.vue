@@ -55,7 +55,6 @@ const fetchNovelData = async () => {
         date: v.created_at ? v.created_at.split('T')[0] : '未知日期',
         file_url: v.file_url,
       })) : []
-    
     }
   } 
   catch (error) {
@@ -82,21 +81,33 @@ const fetchReviews = async () => {
   } catch (error) { console.error(error) }
 }
 
+// === 3. API: 获取当前用户的收藏状态 (新增) ===
+const currentStatus = ref('')
+const fetchCurrentStatus = async () => {
+  if (!userStore.userInfo) return;
+  try {
+    const res = await axios.get('http://127.0.0.1:8000/a/collections/status/', {
+      params: {
+        user_id: userStore.userInfo.id,
+        target_type: 'novel', // 注意这里改成了 novel
+        target_id: novelId
+      }
+    });
+    currentStatus.value = res.data.status || '';
+  } catch (error) {
+    console.error('获取收藏状态失败', error);
+  }
+}
+
 onMounted(() => {
   fetchNovelData()
   fetchReviews()
+  fetchCurrentStatus() // <--- 记得调用
 })
 
-// === 状态逻辑 ===
-const isFavorited = computed(() => {
-  if (!novel.value || !userStore.userInfo) return false
-  return userStore.novelLibrary?.favorites?.some(n => n.id === novelId) ?? false
-})
-
-const isRead = computed(() => {
-  if (!novel.value || !userStore.userInfo) return false
-  return userStore.novelLibrary?.read?.some(n => n.id === novelId) ?? false
-})
+// === 状态逻辑 (修改为根据 currentStatus 计算) ===
+const isFavorited = computed(() => currentStatus.value === 'fav')
+const isRead = computed(() => currentStatus.value === 'read')
 
 const averageScore = computed(() => {
   if (reviews.value.length === 0) return 0
@@ -104,18 +115,42 @@ const averageScore = computed(() => {
   return (total / reviews.value.length).toFixed(1)
 })
 
-// === 交互逻辑 ===
-const handleFavorite = () => {
-  if (!userStore.userInfo) { message.warning('请先登录'); router.push('/login'); return }
-  const success = userStore.toggleNovelFavorite(novel.value)
-  message.success(success ? '已加入书架' : '已取消收藏')
+// === 4. 交互逻辑 (修改为调用后端接口) ===
+const toggleStatus = async (status) => {
+  if (!userStore.userInfo) { 
+    message.warning('请先登录'); 
+    router.push('/login'); 
+    return; 
+  }
+  if (!novel.value) return;
+
+  const isCancel = currentStatus.value === status;
+  const targetStatus = isCancel ? 'none' : status;
+
+  try {
+    await axios.post('http://127.0.0.1:8000/a/collections/toggle/', {
+      user_id: userStore.userInfo.id,
+      target_type: 'novel', // 目标类型：轻小说
+      target_id: novelId,
+      status: targetStatus
+    });
+
+    currentStatus.value = isCancel ? '' : status;
+
+    if (isCancel) {
+      message.info('已取消标记');
+    } else {
+      const msgMap = { fav: '已加入书架', read: '标记为已读' };
+      message.success(msgMap[status]);
+    }
+  } catch (error) {
+    console.error('操作失败:', error);
+    message.error('操作失败，请重试');
+  }
 }
 
-const handleMarkAsRead = () => {
-  if (!userStore.userInfo) { message.warning('请先登录'); router.push('/login'); return }
-  const success = userStore.toggleNovelRead(novel.value)
-  message.success(success ? '标记为已读' : '取消已读状态')
-}
+const handleFavorite = () => toggleStatus('fav')
+const handleMarkAsRead = () => toggleStatus('read')
 
 const scrollToComments = () => {
   const commentSection = document.getElementById('comment-section')
@@ -127,14 +162,10 @@ const scrollToComments = () => {
 
 const handleShare = () => message.success('链接已复制')
 
-// === ✅ 阅读功能实现 ===
-
-// 1. 跳转到指定卷的阅读页面
-// 跳转到指定卷的阅读页面
+// === 阅读功能实现 (保持不变) ===
 const handleReadVolume = (volId) => {
   if (!volId) return message.warning('无法获取章节信息')
   
-  // 1. 先在当前数据里找到这一卷，为了拿到它的 file_url
   const targetVol = novel.value.volumes.find(v => v.id === volId)
   
   if (!targetVol) {
@@ -142,27 +173,23 @@ const handleReadVolume = (volId) => {
     return
   }
 
-  // 2. 检查有没有链接
   if (!targetVol.file_url) {
     message.warning('该章节暂无文件资源，请联系管理员上传')
     return
   }
   
-  // 3. 带参数跳转！
   router.push({
-    name: 'reader',       // 对应路由里的 name
-    params: { id: volId }, // 对应 path: '/read/:id'
+    name: 'reader',
+    params: { id: volId }, 
     query: { 
-      // 👇 这就是 ReaderView 里 props.url 等不到的那个值！
       url: targetVol.file_url, 
       title: targetVol.title 
     } 
   })
 }
-// 2. 点击“开始阅读”大按钮（默认读取第一卷）
+
 const handleStartRead = () => {
   if (novel.value && novel.value.volumes && novel.value.volumes.length > 0) {
-    // 获取第一卷的 ID
     const firstVolId = novel.value.volumes[0].id
     handleReadVolume(firstVolId)
   } else {
@@ -170,7 +197,7 @@ const handleStartRead = () => {
   }
 }
 
-// === 评论提交 ===
+// === 评论提交 (保持不变) ===
 const commentContent = ref('')
 const userRating = ref(0)
 const isAvatarUrl = (str) => str && (str.startsWith('http') || str.startsWith('data:'))

@@ -23,7 +23,7 @@ const gameId = Number(route.params.id)
 const game = ref(null)
 const loading = ref(true)
 
-// === 1. 获取游戏详情 (包含角色数据) ===
+// === 1. 获取游戏详情 (保持不变) ===
 const fetchGalgameData = async () => {
   try {
     loading.value = true
@@ -43,7 +43,6 @@ const fetchGalgameData = async () => {
       description: data.description,
       cover: data.cover,
       gallery: data.cgs.map(cg => cg.image_url),
-      // 映射后端返回的角色数据
       characters: data.characters ? data.characters.map(c => ({
         id: c.id,
         name: c.name,
@@ -60,7 +59,7 @@ const fetchGalgameData = async () => {
   }
 }
 
-// === 2. 获取评论 ===
+// === 2. 获取评论 (保持不变) ===
 const reviews = ref([])
 const fetchReviews = async () => {
   try {
@@ -76,20 +75,31 @@ const fetchReviews = async () => {
   } catch (error) { console.error(error) }
 }
 
+// === 3. 获取当前用户的收藏状态 (新增) ===
+const currentStatus = ref('')
+const fetchCurrentStatus = async () => {
+  if (!userStore.userInfo) return;
+  try {
+    const res = await axios.get('http://127.0.0.1:8000/a/collections/status/', {
+      params: {
+        user_id: userStore.userInfo.id,
+        target_type: 'galgame',
+        target_id: gameId
+      }
+    });
+    currentStatus.value = res.data.status || '';
+  } catch (error) {
+    console.error('获取收藏状态失败', error);
+  }
+}
+
 onMounted(() => {
   fetchGalgameData()
   fetchReviews()
+  fetchCurrentStatus()
 })
 
-// === 状态与交互逻辑 ===
-const currentStatus = computed(() => {
-  if (!userStore.userInfo || !game.value) return ''
-  if (userStore.galgameLibrary.wish.some(g => g.id === gameId)) return 'wish'
-  if (userStore.galgameLibrary.playing.some(g => g.id === gameId)) return 'playing'
-  if (userStore.galgameLibrary.played.some(g => g.id === gameId)) return 'played'
-  return ''
-})
-
+// === 衍生计算逻辑 (保持不变) ===
 const averageScore = computed(() => {
   if (reviews.value.length === 0) return 0
   const total = reviews.value.reduce((sum, item) => sum + item.score, 0)
@@ -136,20 +146,43 @@ const submitReview = async () => {
   } catch (e) { message.error('发送失败') }
 }
 
-const handleStatusChange = (status) => {
-  if (!userStore.userInfo) { message.warning('请登录'); router.push('/login'); return }
-  if (!game.value) return 
-  if (currentStatus.value === status) {
-    userStore.setGalgameStatus(game.value, null)
-    message.info('已取消标记')
-  } else {
-    userStore.setGalgameStatus(game.value, status)
-    const msgMap = { wish: '已加入愿望单', playing: '开始记录游玩进度', played: '标记为已玩过' }
-    message.success(msgMap[status])
+// === 4. 状态切换逻辑 (已修改为调用后端接口) ===
+const handleStatusChange = async (status) => {
+  if (!userStore.userInfo) { 
+    message.warning('请登录'); 
+    router.push('/login'); 
+    return; 
+  }
+  if (!game.value) return; 
+
+  const isCancel = currentStatus.value === status;
+  const targetStatus = isCancel ? 'none' : status;
+
+  try {
+    await axios.post('http://127.0.0.1:8000/a/collections/toggle/', {
+      user_id: userStore.userInfo.id,
+      target_type: 'galgame',
+      target_id: gameId,
+      status: targetStatus
+    });
+
+    currentStatus.value = isCancel ? '' : status;
+
+    if (isCancel) {
+      message.info('已取消标记');
+    } else {
+      const msgMap = { wish: '已加入愿望单', playing: '开始记录游玩进度', played: '标记为已玩过' };
+      message.success(msgMap[status]);
+    }
+  } catch (error) {
+    console.error('操作失败:', error);
+    message.error('操作失败，请重试');
   }
 }
+
 const handleShare = () => message.success('链接已复制到剪贴板')
 </script>
+
 <template>
   <div class="min-h-screen bg-gray-900 text-white relative overflow-hidden font-sans">
     
@@ -258,7 +291,7 @@ const handleShare = () => message.success('链接已复制到剪贴板')
                         </div>
                     </div>
                 </n-tab-pane>
-<n-tab-pane name="chars" tab="出场角色">
+                <n-tab-pane name="chars" tab="出场角色">
                     <div class="bg-black/50 backdrop-blur-md rounded-xl p-6 border border-white/10 min-h-[400px]">
                         <div v-if="game.characters.length === 0" class="text-center text-gray-500 py-10">
                             暂无角色信息
@@ -345,7 +378,7 @@ const handleShare = () => message.success('链接已复制到剪贴板')
 </template>
 
 <style scoped>
-/* Added stronger text shadow for character names */
+/* 原有样式保持不变 */
 .text-shadow { text-shadow: 2px 2px 4px rgba(0,0,0,0.9); }
 
 .animate-fade-in { animation: fadeIn 0.8s ease-out; }
@@ -353,7 +386,6 @@ const handleShare = () => message.success('链接已复制到剪贴板')
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Naive UI Tabs Style Adaptation */
 :deep(.n-tabs .n-tabs-rail) {
     background-color: rgba(0, 0, 0, 0.6);
 }
@@ -361,7 +393,7 @@ const handleShare = () => message.success('链接已复制到剪贴板')
     color: #bbb;
 }
 :deep(.n-tabs .n-tabs-tab--active) {
-    color: #fb7299 !important; /* Selected text turns pink */
+    color: #fb7299 !important; 
     font-weight: bold;
     background-color: rgba(255, 255, 255, 0.1);
 }

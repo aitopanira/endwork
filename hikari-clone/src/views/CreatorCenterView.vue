@@ -1,21 +1,28 @@
 <script setup>
-import { ref, h, computed, watch } from 'vue' 
+import { ref, h, computed, watch, onMounted } from 'vue' 
 import { useRouter } from 'vue-router'
 import { 
-  NMenu, NForm, NFormItem, NInput, NSelect, NButton, 
+  NMenu, NForm, NFormItem, NInput, NButton, 
   NUpload, NUploadDragger, NIcon, NText, useMessage
 } from 'naive-ui'
 import { 
   GameControllerOutline, BookOutline, CloudUploadOutline, 
-  SaveOutline, PaperPlaneOutline 
+  PaperPlaneOutline 
 } from '@vicons/ionicons5'
-import { useCommunityStore } from '../stores/community'
 import { useUserStore } from '../stores/user'
+import axios from 'axios'
 
 const router = useRouter()
 const message = useMessage()
-const communityStore = useCommunityStore()
 const userStore = useUserStore()
+
+// === 路由拦截：未登录踢回登录页 ===
+onMounted(() => {
+  if (!userStore.userInfo) {
+    message.warning('请先登录后再进入创作者中心')
+    router.push('/login')
+  }
+})
 
 // === 1. 菜单样式 (粉色主题) ===
 const menuThemeOverrides = {
@@ -28,8 +35,8 @@ const menuThemeOverrides = {
   itemIconColorHover: '#fb7299'
 }
 
-// === 2. 侧边栏菜单 (拆分为两个独立的板块) ===
-const activeKey = ref('gal_post') // 默认选中 Galgame 投稿
+// === 2. 侧边栏菜单：控制大分区 ===
+const activeKey = ref('gal_post') 
 
 const menuOptions = [
   { 
@@ -44,21 +51,21 @@ const menuOptions = [
   }
 ]
 
-// === 3. 表单数据模型 ===
+// === 3. 表单数据模型 (恢复为单一的 category) ===
 const formData = ref({
   title: '',
   content: '', 
-  cover: null,
+  coverFile: null, 
   category: null 
 })
+const loading = ref(false)
 
-// === 4. 动态计算：页面标题 ===
+// === 4. 动态计算标题 ===
 const pageTitle = computed(() => {
   return activeKey.value === 'gal_post' ? '发布 Galgame 相关资讯' : '发布 轻小说 相关资讯'
 })
 
-// === 5. 动态计算：分类选项 ===
-// 根据左侧菜单选中的不同，右侧下拉框只显示对应的选项
+// === 5. 动态计算下拉框选项 (根据左侧菜单自动切换) ===
 const currentCategoryOptions = computed(() => {
   if (activeKey.value === 'gal_post') {
     return [
@@ -73,37 +80,54 @@ const currentCategoryOptions = computed(() => {
   }
 })
 
-// === 6. 监听菜单切换，清空分类防止选错 ===
+// === 6. 监听菜单切换，清空下拉框的历史选择 ===
 watch(activeKey, () => {
-  formData.value.category = null // 切换板块时，重置分类
+  formData.value.category = null 
 })
 
-// === 7. 提交逻辑 ===
+// === 7. 获取用户选择的文件 ===
+const handleUploadChange = (options) => {
+  if (options.fileList.length > 0) {
+    formData.value.coverFile = options.fileList[0].file
+  } else {
+    formData.value.coverFile = null
+  }
+}
+
+// === 8. 提交逻辑 ===
 const handleSubmit = async () => {
   if (!formData.value.title) return message.warning('标题不能为空')
   if (!formData.value.category) return message.warning('请选择具体的分类')
+  if (!formData.value.content) return message.warning('正文不能为空')
   
+  loading.value = true
   try {
-    await communityStore.addPost({
-      title: formData.value.title,
-      content: formData.value.content,
-      // 自动截取摘要
-      summary: formData.value.content.substring(0, 100), 
-      category: formData.value.category, 
-      cover: '', // 待接接口
-      author: userStore.userInfo?.id 
-    })
+    const payload = new FormData()
+    payload.append('title', formData.value.title)
+    payload.append('content', formData.value.content)
+    payload.append('summary', formData.value.content.substring(0, 100))
+    payload.append('category', formData.value.category) // 直接传给后端 gal_news 等格式
+    payload.append('author', userStore.userInfo.id)
+    
+    if (formData.value.coverFile) {
+      payload.append('cover_file', formData.value.coverFile)
+    }
+
+    await axios.post('http://127.0.0.1:8000/a/posts/', payload)
+    
     message.success('发布成功！')
     router.push('/') 
   } catch (error) {
-    console.error(error)
-    message.error('发布失败，请稍后重试')
+    console.error('发布失败:', error)
+    message.error('发布失败，请检查网络或后端服务')
+  } finally {
+    loading.value = false
   }
 }
 </script>
 
 <template>
-  <div class="h-[calc(100vh-64px)] bg-[#f9fafb] flex">
+  <div class="min-h-screen bg-[#f9fafb] flex">
     
     <div class="w-64 bg-white border-r border-gray-100 flex-shrink-0 flex flex-col">
       <div class="p-6">
@@ -124,16 +148,14 @@ const handleSubmit = async () => {
       </div>
     </div>
 
-    <div class="flex-grow overflow-y-auto p-8">
+    <div class="flex-grow p-8">
       
       <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 p-8">
         
         <div class="flex justify-between items-center mb-8 border-b border-gray-100 pb-4">
-          <h2 class="text-xl font-bold text-gray-800">
-            {{ pageTitle }}
-          </h2>
+          <h2 class="text-xl font-bold text-gray-800">{{ pageTitle }}</h2>
           <div class="flex gap-3">
-            <n-button type="primary" color="#fb7299" @click="handleSubmit">
+            <n-button type="primary" color="#fb7299" :loading="loading" @click="handleSubmit">
               <template #icon><n-icon :component="PaperPlaneOutline" /></template>
               立即发布
             </n-button>
@@ -147,11 +169,19 @@ const handleSubmit = async () => {
           </n-form-item>
 
           <n-form-item label="细分领域">
-             <n-select 
-                v-model:value="formData.category" 
-                :options="currentCategoryOptions" 
-                placeholder="请选择是资讯还是点评"
-              />
+            <select 
+              v-model="formData.category" 
+              class="w-full h-10 px-3 border border-gray-300 rounded hover:border-[#fb7299] focus:outline-none focus:border-[#fb7299] transition-colors bg-white cursor-pointer text-gray-700"
+            >
+              <option :value="null" disabled hidden>请选择是资讯还是点评</option>
+              <option 
+                v-for="opt in currentCategoryOptions" 
+                :key="opt.value" 
+                :value="opt.value"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
           </n-form-item>
 
           <n-form-item label="正文内容">
@@ -164,7 +194,12 @@ const handleSubmit = async () => {
           </n-form-item>
 
           <n-form-item label="文章封面">
-            <n-upload directory-dnd :max="1">
+            <n-upload 
+              directory-dnd 
+              :max="1" 
+              :default-upload="false"
+              @change="handleUploadChange"
+            >
               <n-upload-dragger>
                 <div style="margin-bottom: 12px">
                   <n-icon size="48" :depth="3" :component="CloudUploadOutline" />
@@ -181,3 +216,11 @@ const handleSubmit = async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+select {
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  appearance: auto;
+}
+</style>

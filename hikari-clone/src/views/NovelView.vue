@@ -7,22 +7,21 @@ import {
   ReaderOutline, ImageOutline, ShuffleOutline
 } from '@vicons/ionicons5'
 import { useUserStore } from '../stores/user'
-import axios from 'axios' // 引入 axios
+import axios from 'axios' 
 
 const router = useRouter()
 const userStore = useUserStore()
 
 // === 1. 数据定义 ===
-const allNovels = ref([]) // 现在的全部小说列表（从后端获取）
+const allNovels = ref([]) 
 const loading = ref(true)
-// 推荐列表和分类
+
 const latestUpdates = ref([])
 const recommendations = ref([]) 
 const activeCategory = ref('校园') 
 const categories = ['校园', '恋爱', '战斗', '科幻', '奇幻', '异世界', '推理', '后宫', '热血', '百合', '搞笑', '催泪', '治愈', '致郁', '日常']
 const categorySectionRef = ref(null)
 
-// 轮播图数据
 const featuredNovels = ref([])
 
 // === 2. 核心：从后端获取真实数据 ===
@@ -31,19 +30,17 @@ const fetchNovels = async () => {
     loading.value = true
     const response = await axios.get('http://127.0.0.1:8000/a/novels/')
     const bake=response.data
-    // 映射后端数据到前端格式
     allNovels.value = response.data.map(novel => ({
       id: novel.id,
       title: novel.title,
       originalTitle: novel.original_title || '暂无原名',
       author: novel.author,
-      label: novel.publisher || '未知文库', // 用出版社代替文库
-      tags: novel.tags.map(t => t.name),    // 提取标签名
+      label: novel.publisher || '未知文库', 
+      tags: novel.tags.map(t => t.name),    
       cover: novel.cover,
-      summary: novel.description ? novel.description.substring(0, 50) + '...' : '暂无简介', // 截取简介
+      summary: novel.description ? novel.description.substring(0, 50) + '...' : '暂无简介', 
       thumbnails: novel.volumes.map(v => v.cover)
     }))
-    // 数据获取完后，初始化推荐和轮播
     initPageData()
     bake.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
     latestUpdates.value = bake.slice(0, 10).map(novel => ({ id: novel.id, title: novel.title }))
@@ -56,32 +53,24 @@ const fetchNovels = async () => {
 
 // === 3. 初始化页面逻辑 ===
 const initPageData = () => {
-  // 1. 随机推荐
   shuffleRecommendations()
-  
-  // 2. 初始化轮播图 (取前3个有封面的)
   if (allNovels.value.length > 0) {
     featuredNovels.value = allNovels.value.slice(0, 3)
   }
 }
 
-// 随机推荐逻辑
 const shuffleRecommendations = () => {
   if (allNovels.value.length === 0) return
-  // 随机打乱取前 10 个
   const shuffled = [...allNovels.value].sort(() => 0.5 - Math.random())
   recommendations.value = shuffled.slice(0, 10)
 }
 
-// 分类筛选逻辑
 const categoryBooks = computed(() => {
   if (allNovels.value.length === 0) return []
   const filtered = allNovels.value.filter(book => book.tags.includes(activeCategory.value))
-  // 如果该分类没书，为了演示效果，返回全部书的前5本 (或者你可以返回空数组)
   return filtered.length > 0 ? filtered : allNovels.value.slice(0, 5)
 })
 
-// 侧边栏点击
 const handleSidebarTagClick = (tag) => {
   activeCategory.value = tag
   if (categorySectionRef.value) {
@@ -89,11 +78,7 @@ const handleSidebarTagClick = (tag) => {
   }
 }
 
-onMounted(() => {
-  fetchNovels()
-})
 
-// === 静态假数据 (资讯、发布者、热评) 保持不变，仅展示用 ===
 const newsList = [
   { id: 1, title: '《夏日重现》外传小说发售', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg', date: '3天前' },
   { id: 2, title: 'SONY宣布收购KADOKAWA', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', date: '5天前' },
@@ -101,22 +86,45 @@ const newsList = [
   { id: 4, title: '轻小说销量排行榜发布', cover: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', date: '1周前' },
 ]
 
-// 发布者板块 (逻辑需要基于真实数据动态生成，这里先简单过滤)
 const publisherSections = computed(() => {
-    // 这里简单演示：把所有书分成两个假文库展示，实际可根据 publisher 字段分组
     return [
         { name: '热门文库', books: allNovels.value.slice(0, 5) },
         { name: '新刊速递', books: allNovels.value.slice(5, 10) }
     ]
 })
 
-const hotReviews = [
-  { id: 1, title: '在点滴的拉扯日常中，确认彼此之间的心意', user: 'k1seka', bg: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', views: 538 },
-  { id: 2, title: '道别过去，拥抱未来', user: '牧月', bg: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg', views: 3889 },
-  { id: 3, title: '『转生王女与天才千金』的合理性反转', user: 'ringyuki', bg: 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel4.jpeg', views: 1594 },
-]
+// === 🌟 修改点 1：将写死的点评改为响应式变量，并增加获取后端的函数 ===
+const hotReviews = ref([])
 
+const fetchReviews = async () => {
+  try {
+    const response = await axios.get('http://127.0.0.1:8000/a/getuser/posts/')
+    // 过滤出轻小说点评 (novel_review)
+    const novelReviews = response.data.filter(p => p.category === 'novel_review')
+    
+    // 映射到前端需要的格式，取前3条展示
+    hotReviews.value = novelReviews.map(post => ({
+      id: post.id,
+      title: post.title,
+      user: '热心书友', // 如果后端有 author.name 可以换成对应的字段
+      bg: post.cover || 'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg', // 如果没有封面给个默认图
+      views: Math.floor(Math.random() * 500) + 100 // 模拟热度，如果后端有真实浏览量可以替换
+    })).slice(0, 3)
+  } catch (error) {
+    console.error('获取热门点评失败:', error)
+  }
+}
 
+// === 🌟 修改点 2：在 onMounted 中调用获取点评数据 ===
+onMounted(() => {
+  fetchNovels()
+  fetchReviews() 
+})
+
+// === 🌟 修改点 3：增加跳转到文章详情的逻辑 ===
+const goToPost = (id) => {
+  router.push(`/post/${id}`)
+}
 
 const goToDetail = (id) => {
   router.push(`/novel/${id}`)
@@ -167,15 +175,6 @@ const goToDetail = (id) => {
           </n-carousel>
         </div>
 
-        <section>
-          <div class="flex items-center gap-2 mb-4 border-l-4 border-hikari-blue pl-3"><h2 class="text-lg font-bold">资讯</h2></div>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div v-for="news in newsList" :key="news.id" class="group cursor-pointer">
-              <div class="rounded-lg overflow-hidden mb-2 relative h-32"><img :src="news.cover" class="w-full h-full object-cover group-hover:scale-110 transition duration-500"></div>
-              <h3 class="text-xs font-bold text-gray-700 line-clamp-2 group-hover:text-hikari-blue transition h-10">{{ news.title }}</h3>
-            </div>
-          </div>
-        </section>
 
         <section>
           <div class="flex items-center justify-between mb-6">
@@ -245,18 +244,25 @@ const goToDetail = (id) => {
             <h2 class="text-lg font-bold text-gray-800">热门点评</h2>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div v-for="review in hotReviews" :key="review.id" class="h-40 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm">
+            
+            <div 
+              v-for="review in hotReviews" 
+              :key="review.id" 
+              @click="goToPost(review.id)" 
+              class="h-40 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm"
+            >
               <img :src="review.bg" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-700">
               <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
               <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
-                <div class="bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded inline-block mb-2 font-bold shadow-sm">10.0</div>
+                <div class="bg-yellow-500 text-white text-[10px] px-1.5 py-0.5 rounded inline-block mb-2 font-bold shadow-sm">点评</div>
                 <h3 class="font-bold text-sm leading-snug mb-2 line-clamp-2 group-hover:text-yellow-300 transition">{{ review.title }}</h3>
                 <div class="flex justify-between items-center text-xs text-white/70">
-                   <div class="flex items-center gap-1"><n-avatar round :size="16" :src="review.bg"/> {{ review.user }}</div>
-                   <div class="flex items-center gap-1"><n-icon :component="Flame"/> {{ review.views }}</div>
+            
+             
                 </div>
               </div>
             </div>
+            
           </div>
         </section>
 
@@ -308,7 +314,7 @@ const goToDetail = (id) => {
               <n-icon :component="ReaderOutline"/> 最新连载
             </h3>
             <ul class="space-y-3">
-              <li v-for="(item in latestUpdates" :key="item.id" class="flex justify-between items-center text-xs group cursor-pointer" @click="goToDetail(item.id)">
+              <li v-for="item in latestUpdates" :key="item.id" class="flex justify-between items-center text-xs group cursor-pointer" @click="goToDetail(item.id)">
                 <span class="text-gray-600 truncate group-hover:text-hikari-blue transition max-w-[180px]">{{ item.title }}</span>
                 <span class="text-gray-300 scale-90">更新</span>
               </li>

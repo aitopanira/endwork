@@ -17,8 +17,22 @@ const message = useMessage() // 注册消息提示
 
 // 1. 顶部 Banner
 const banners = [
-  'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel1.jpeg',
-  'https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel2.jpeg'
+  { 
+    url: 'https://lunbo.aihikari.xyz/%E8%BD%AE%E6%92%AD%E5%9B%BE/a.4webp.webp',
+    title: 'Whirlpool 最终作《Relirium -レリリウム- 遺跡と出逢いと冒険と》预计于 2026 年 5 月 29 日发售',
+    desc: '本周，Baseson宣布制作新作《戦国†恋姫BRAVE弐 本作由近江谷宥负责剧本、水鏡まみず负责原画、こもわた遙華负责 SD，并由歩サラ、柳ひとみ等人担任 CV。本作在官网上公开了故事背景、角色介绍、部分游戏 CG 和店铺特典预览图等，感兴趣的玩家可以前往官网了解详情。'
+  },
+  { 
+    url:  'https://lunbo.aihikari.xyz/%E8%BD%AE%E6%92%AD%E5%9B%BE/a5.webp',
+    title: 'Liar-soft 新作《誰ソ彼のシェイプシフター》预计于 2026 年 3 月 27 日发售',
+    desc: '本作由瀬菜モナコ负责原画，由又かつお负责剧本。主题曲《Kick Starter》由 Rita 演唱和作词，Blueberry & Yoghurt 作编曲。'
+  },
+  {
+    url:  'https://lunbo.aihikari.xyz/%E8%BD%AE%E6%92%AD%E5%9B%BE/a6.webp',
+    title: 'Purple software 新作《マガルミナ》预计于 2026 年 6 月 26 日发售',
+    desc: '本作由 Go-1 负责原画，御影负责剧本。主题曲《マガラナイ》由紫咲ほたる演唱，石川泰作词，山口たこ作编曲，感兴趣的玩家可以前往游戏官网及油管官方频道了解详情。'
+  },  
+  
 ]
 
 const hotgame=ref([])
@@ -88,10 +102,14 @@ const goToBrand = (name) => {
   router.push(`/brand/${name}`)
 }
 
-// 👇 新增：跳转到搜索页（即查看全部）
+// 跳转到搜索页（即查看全部）
 const goToSearch = () => {
-  // 假设你的搜索页路由是 /search，如果是其他的请修改
   router.push('/search') 
+}
+
+// 👇 新增：跳转到点评文章详情页
+const goToPost = (id) => {
+  router.push(`/post/${id}`)
 }
 
 onMounted(() => {
@@ -103,17 +121,20 @@ onMounted(() => {
 <template>
   <div class="min-h-screen bg-[#f4f5f7] pb-10 font-sans p-4">
     
-    <div class="w-full h-[320px] relative group overflow-hidden">
-      <n-carousel autoplay show-arrow class="h-full">
-        <img v-for="url in banners" :key="url" :src="url" class="w-full h-full object-cover">
-      </n-carousel>
-      <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-8 pt-20">
-        <div class="container mx-auto px-4">
-          <h1 class="text-3xl font-bold text-white mb-2 text-shadow">Mellow新作《True Colors》正式发售！</h1>
-          <p class="text-white/80 text-sm">那个夏天，我们在海边许下的约定，如今是否还能兑现？</p>
-        </div>
-      </div>
+   <n-carousel interval="2000" autoplay show-arrow class="rounded-lg shadow-sm overflow-hidden h-48 sm:h-80">
+  
+  <div v-for="(item, index) in banners" :key="index" class="w-full h-full relative group cursor-pointer">
+    
+    <img :src="item.url" class="w-full h-full object-cover">
+    
+    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 sm:p-6 text-white flex flex-col justify-end">
+      <h1 class="font-bold text-lg sm:text-2xl text-shadow mb-1">{{ item.title }}</h1>
+      <p class="text-xs sm:text-sm text-gray-200 line-clamp-1">{{ item.desc }}</p>
     </div>
+    
+  </div>
+  
+</n-carousel>
 
     <div class="container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
       
@@ -147,13 +168,6 @@ onMounted(() => {
             </div>
           </div>
         </section>
-
-        <div class="h-24 rounded-lg overflow-hidden relative shadow-sm group cursor-pointer">
-           <img src="https://naive-ui.oss-cn-beijing.aliyuncs.com/carousel-img/carousel3.jpeg" class="w-full h-full object-cover">
-           <div class="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/20 transition">
-             <h3 class="text-2xl font-bold text-white tracking-widest border-2 border-white px-6 py-1">广告位招租</h3>
-           </div>
-        </div>
 
         <section>
           <div class="flex items-center gap-2 mb-4">
@@ -200,7 +214,12 @@ onMounted(() => {
              <h2 class="text-lg font-bold text-gray-800">热门点评</h2>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div v-for="review in reviews" :key="review.id" class="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100 group cursor-pointer hover:shadow-md transition">
+            <div 
+              v-for="review in reviews" 
+              :key="review.id" 
+              @click="goToPost(review.id)" 
+              class="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100 group cursor-pointer hover:shadow-md transition"
+            >
               <div class="h-32 overflow-hidden relative">
                 <img :src="review.cover" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                 <div class="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded backdrop-blur-sm">

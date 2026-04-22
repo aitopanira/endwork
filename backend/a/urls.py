@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     UserViewSet, GalgameViewSet, NovelViewSet, 
     PostViewSet, ReviewViewSet, UserCollectionViewSet, TagViewSet,ReadingProgressViewSet,MusicViewSet
+    
 )
 
 router = DefaultRouter()

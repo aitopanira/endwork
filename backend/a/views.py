@@ -1,9 +1,12 @@
+import os
+import uuid
 from rest_framework import viewsets,status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 # 1. 引入所有模型
 from .models import UserInfo, Galgame, Novel, Post, Review, UserCollection, Tag,ReadingProgress,MusicPlayer
+from django.core.files.storage import default_storage
 # 2. 引入所有序列化器
 from .serializers import (
     UserInfoSerializer, GalgameSerializer, NovelSerializer, 
@@ -96,10 +99,56 @@ class NovelViewSet(viewsets.ModelViewSet):
     serializer_class = NovelSerializer
 
 # === 帖子视图 ===
+from django.core.files.storage import default_storage # 引入 Django 存储引擎
+
 class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all().order_by('-created_at', '-is_pinned')
+    queryset = Post.objects.all()
     serializer_class = PostSerializer
 
+    # 👇 新增这个方法：让接口支持按作者过滤
+    def get_queryset(self):
+        queryset = Post.objects.all().order_by('-id') # 默认按最新发布倒序排列
+        
+        # 尝试从请求 URL 中获取 author 参数，例如 /a/posts/?author=6
+        author_id = self.request.query_params.get('author', None)
+        if author_id is not None:
+            # 如果传了作者ID，就只返回该作者的文章
+            queryset = queryset.filter(author_id=author_id)
+            
+        return queryset
+
+    def perform_create(self, serializer):
+        # 1. 尝试获取前端传来的作者 ID
+        author_id = self.request.data.get('author')
+        
+        # 🚨 终极防线：如果在这一步没拿到 author_id，立刻拦截！
+        # 不要让它去碰数据库（避免引发 500 崩溃），而是直接扔回一个 400 错误给前端
+        if not author_id or author_id == 'undefined' or author_id == 'null':
+            raise ValidationError({
+                "author": "后端没有收到有效的作者 ID！请检查前端 userStore.userInfo 是否包含了正确的 id 属性。"
+            })
+
+        # 2. 处理图片逻辑（保持不变，已经很完美了）
+        cover_file = self.request.FILES.get('cover_file') 
+        cover_url = ""
+
+        if cover_file:
+            ext = os.path.splitext(cover_file.name)[1]  
+            safe_filename = f"{uuid.uuid4().hex}{ext}"  
+            file_path = f"post_covers/{safe_filename}"
+
+            saved_path = default_storage.save(file_path, cover_file)
+            full_url = default_storage.url(saved_path)
+            
+            if '?' in full_url:
+                full_url = full_url.split('?')[0]
+                
+            cover_url = full_url
+        else:
+            cover_url = self.request.data.get('cover', '')
+
+        # 3. 强制带着校验过的 author_id 和图片链接保存
+        serializer.save(author_id=author_id, cover=cover_url)
 # === 评论视图 ===
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all().order_by('-created_at')
@@ -204,3 +253,69 @@ class ReadingProgressViewSet(viewsets.ModelViewSet):
 class MusicViewSet(viewsets.ModelViewSet):
     queryset = MusicPlayer.objects.all()
     serializer_class = MusicPlayerSerializer
+
+
+# === 用户收藏视图 ===
+class UserCollectionViewSet(viewsets.ModelViewSet):
+    queryset = UserCollection.objects.all()
+    serializer_class = UserCollectionSerializer
+
+    def get_queryset(self):
+        queryset = UserCollection.objects.all()
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        return queryset
+
+    # 👇 修复：通过 @action 注册 /collections/status/ (GET 请求)
+    @action(detail=False, methods=['get'])
+    def status(self, request):
+        user_id = request.query_params.get('user_id')
+        target_type = request.query_params.get('target_type')
+        target_id = request.query_params.get('target_id')
+
+        if not user_id:
+            return Response({"status": None})
+
+        collection = UserCollection.objects.filter(
+            user_id=user_id, 
+            target_type=target_type, 
+            target_id=target_id
+        ).first()
+
+        if collection:
+            return Response({"status": collection.status})
+        return Response({"status": None})
+
+    # 👇 修复：通过 @action 注册 /collections/toggle/ (POST 请求)
+    @action(detail=False, methods=['post'])
+    def toggle(self, request):
+        user_id = request.data.get('user_id')
+        target_type = request.data.get('target_type')
+        target_id = request.data.get('target_id')
+        # 变量命名为 status_val 避免与 rest_framework 的 status 模块冲突
+        status_val = request.data.get('status') 
+
+        try:
+            user = UserInfo.objects.get(id=user_id)
+        except UserInfo.DoesNotExist:
+            return Response({"error": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+
+        # 核心逻辑：先删除该用户对该目标的所有旧状态
+        UserCollection.objects.filter(
+            user=user,
+            target_type=target_type,
+            target_id=target_id
+        ).delete()
+
+        # 核心逻辑：如果前端传来的不是 'none'（取消），则创建新状态
+        if status_val != 'none':
+            UserCollection.objects.create(
+                user=user,
+                target_type=target_type,
+                target_id=target_id,
+                status=status_val
+            )
+            return Response({"message": "状态已更新", "status": status_val})
+            
+        return Response({"message": "状态已取消", "status": ""})

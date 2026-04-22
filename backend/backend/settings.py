@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'a.apps.AConfig',
     'rest_framework',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -142,8 +143,10 @@ R2_ACCESS_KEY_ID = '92da60ad0e5da6ed0900c4cfcf7065ce'
 R2_SECRET_ACCESS_KEY = '93957a4e48776dc3c30ddb50ed7babc8db05c695c177915ea24f19c6242859f6'
 # 注意：Endpoint 必须是 https://... 开头，且不带 bucket 名字
 R2_ENDPOINT_URL = 'https://1667ccbfbaa13fc1546b6f415164f667.r2.cloudflarestorage.com'
-R2_BUCKET_NAME = 'my-gal-images' # 你的桶名字
-R2_PUBLIC_DOMAIN = 'https://pub-31746bf4167d45c09c44a61e59e55416.r2.dev' # 你的公开访问前缀
+R2_BUCKET_NAME = 'post-image' # 你的桶名字
+# 👇 重点修改：换成你的自定义域名 
+# 注意：千万不要加 https://，只写纯域名，Django 会自动在前面补上 https://
+R2_PUBLIC_DOMAIN = 'post.aihikari.xyz'
 
 # 1. 允许的前端域名 (必须精准，不能用 *)
 CORS_ALLOWED_ORIGINS = [
@@ -170,3 +173,49 @@ from corsheaders.defaults import default_headers
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-csrftoken',
 ]
+
+
+# ==========================================
+# 将自定义的 R2 配置映射给 django-storages
+# ==========================================
+AWS_ACCESS_KEY_ID = R2_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY = R2_SECRET_ACCESS_KEY
+AWS_STORAGE_BUCKET_NAME = R2_BUCKET_NAME
+AWS_S3_ENDPOINT_URL = R2_ENDPOINT_URL
+
+# R2 公开访问域名 (注意：django-storages 的 CUSTOM_DOMAIN 不包含 https://)
+AWS_S3_CUSTOM_DOMAIN = R2_PUBLIC_DOMAIN.replace('https://', '')
+
+# 关闭查询字符串签名（因为我们用的是公开域名直接访问）
+AWS_QUERYSTRING_AUTH = False
+
+# 核心：告诉 Django 默认使用 S3 (R2) 引擎来存储 ImageField 和 FileField 的文件
+# ==========================================
+# Django 5.x 专属：接管文件存储引擎
+# ==========================================
+STORAGES = {
+    # 覆盖默认的文件存储（处理 ImageField 和 FileField）
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    },
+    # 保持静态文件（CSS/JS）依然存在本地
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+# 👇 新增下面这两行，这是强制兼容 Cloudflare R2 必须加的参数：
+AWS_S3_REGION_NAME = 'auto'            # Cloudflare R2 必须指定 region 为 auto 或 us-east-1
+AWS_S3_SIGNATURE_VERSION = 's3v4'      # 强制使用 v4 签名，否则会报权限错误
+
+
+# settings.py 底部
+
+# 1. 必须关闭查询字符串认证，否则 R2 会因为 URL 里的签名参数而报 403 或无法解析
+AWS_QUERYSTRING_AUTH = False
+
+# 2. 必须设置自定义域名，且不要带 https://
+AWS_S3_CUSTOM_DOMAIN = 'post.aihikari.xyz'
+
+# 3. 确保这个变量被正确映射
+AWS_S3_ENDPOINT_URL = 'https://1667ccbfbaa13fc1546b6f415164f667.r2.cloudflarestorage.com'
